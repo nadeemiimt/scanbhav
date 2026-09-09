@@ -1,4 +1,4 @@
-# Stock Adda — Distribution Guide
+# Scan Bhav — Distribution Guide
 
 Desktop builds bundle the FastAPI backend + React UI into a single launcher. **Build Mac on macOS, Windows on Windows** (PyInstaller is platform-specific).
 
@@ -18,9 +18,9 @@ chmod +x scripts/build-release.sh
 
 | Artifact | Description |
 | --- | --- |
-| `StockAdda.app` | Double-click to run |
-| `StockAdda-macOS-v0.6.0.dmg` | Installer disk image for sharing |
-| `StockAdda-macOS-v0.6.0.zip` | Zipped `.app` |
+| `ScanBhav.app` | Double-click to run |
+| `ScanBhav-macOS-v0.6.0.dmg` | Installer disk image for sharing |
+| `ScanBhav-macOS-v0.6.0.zip` | Zipped `.app` |
 
 ### Windows
 
@@ -37,8 +37,8 @@ pip install -r requirements.txt
 
 | Artifact | Description |
 | --- | --- |
-| `StockAdda\StockAdda.exe` | Run this executable |
-| `StockAdda-Windows-v0.6.0.zip` | Share the whole folder |
+| `ScanBhav\ScanBhav.exe` | Run this executable |
+| `ScanBhav-Windows-v0.6.0.zip` | Share the whole folder |
 
 ## First launch (end users)
 
@@ -47,9 +47,9 @@ pip install -r requirements.txt
 
    | OS | Location |
    | --- | --- |
-   | macOS | `~/Library/Application Support/StockAdda` |
-   | Windows | `%LOCALAPPDATA%\StockAdda` |
-   | Linux | `~/.stockadda` |
+   | macOS | `~/Library/Application Support/ScanBhav` |
+   | Windows | `%LOCALAPPDATA%\ScanBhav` |
+   | Linux | `~/.scanbhav` |
 
 3. Copy `.env.example` → `.env` in that folder (done automatically on first run) and add API keys / broker credentials.
 4. Optional: install [Ollama](https://ollama.com) for local LLM + embeddings.
@@ -57,8 +57,8 @@ pip install -r requirements.txt
 Override data directory:
 
 ```bash
-export STOCK_ADDA_DATA=/path/to/data   # macOS/Linux
-set STOCK_ADDA_DATA=C:\path\to\data    # Windows
+export SCAN_BHAV_DATA=/path/to/data   # macOS/Linux
+set SCAN_BHAV_DATA=C:\path\to\data    # Windows
 ```
 
 ## What is bundled
@@ -76,7 +76,7 @@ set STOCK_ADDA_DATA=C:\path\to\data    # Windows
 
 ## Development vs packaged mode
 
-| | Dev (`./scripts/dev.sh`) | Packaged (`StockAdda`) |
+| | Dev (`./scripts/dev.sh`) | Packaged (`ScanBhav`) |
 | --- | --- | --- |
 | UI | Vite dev server `:5173` | Served by API `:8000` |
 | Data | `./data/` in repo | User app-support folder |
@@ -84,15 +84,15 @@ set STOCK_ADDA_DATA=C:\path\to\data    # Windows
 
 ## Code signing (optional)
 
-- **macOS**: `codesign --deep --force --sign "Developer ID" dist/release/StockAdda.app`
-- **Windows**: Sign `StockAdda.exe` with your Authenticode certificate to reduce SmartScreen warnings.
+- **macOS**: `codesign --deep --force --sign "Developer ID" dist/release/ScanBhav.app`
+- **Windows**: Sign `ScanBhav.exe` with your Authenticode certificate to reduce SmartScreen warnings.
 
 ## Source distribution
 
 To ship source instead of a binary:
 
 ```bash
-git archive --format=zip --prefix=stock-adda/ HEAD -o dist/release/stock-adda-source.zip
+git archive --format=zip --prefix=scan-bhav/ HEAD -o dist/release/scan-bhav-source.zip
 ```
 
 Users then follow the main `README.md` setup (`venv`, `npm install`, `./scripts/dev.sh`).
@@ -101,5 +101,5 @@ Users then follow the main `README.md` setup (`venv`, `npm install`, `./scripts/
 
 - **Frontend missing**: run `cd frontend && npm run build` before PyInstaller.
 - **Bundle seed missing**: run `python packaging/prepare_bundle_data.py`.
-- **PyInstaller import errors**: add the module to `hiddenimports` in `packaging/stock_adda.spec`.
+- **PyInstaller import errors**: add the module to `hiddenimports` in `packaging/scan_bhav.spec`.
 - **Large artifact (~500MB+)**: expected with pandas + chromadb; use the zip/dmg, not git.

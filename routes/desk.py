@@ -287,7 +287,7 @@ def desk_export_csv(request: ExportCsvRequest) -> dict[str, Any]:
     return {
         "kind": request.kind,
         "csv": text,
-        "filename": f"stock_adda_{request.kind}.csv",
+        "filename": f"scan_bhav_{request.kind}.csv",
         "row_count": max(0, text.count("\n") - 1),
     }
 

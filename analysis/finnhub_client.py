@@ -11,11 +11,11 @@ from fetch_stock_data import yahoo_symbol
 
 
 def finnhub_key() -> Optional[str]:
-    return os.environ.get("FINNHUB_API_KEY") or os.environ.get("STOCK_ADDA_FINNHUB_API_KEY")
+    return os.environ.get("FINNHUB_API_KEY") or os.environ.get("SCAN_BHAV_FINNHUB_API_KEY")
 
 
 def finnhub_webhook_secret() -> Optional[str]:
-    return os.environ.get("FINNHUB_WEBHOOK_SECRET") or os.environ.get("STOCK_ADDA_FINNHUB_WEBHOOK_SECRET")
+    return os.environ.get("FINNHUB_WEBHOOK_SECRET") or os.environ.get("SCAN_BHAV_FINNHUB_WEBHOOK_SECRET")
 
 
 def finnhub_symbol(symbol: str) -> str:

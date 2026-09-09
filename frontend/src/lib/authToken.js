@@ -1,6 +1,6 @@
 /** JWT storage for authenticated API calls. */
 
-const TOKEN_KEY = 'stockAddaAuthToken'
+const TOKEN_KEY = 'scanBhavAuthToken'
 
 export function getAuthToken() {
   try {

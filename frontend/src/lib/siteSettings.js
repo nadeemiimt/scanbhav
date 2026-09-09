@@ -1,4 +1,4 @@
-export const SETTINGS_KEY = 'stockAddaSettings'
+export const SETTINGS_KEY = 'scanBhavSettings'
 
 export const DEFAULT_SETTINGS = {
   theme: 'dark',
@@ -12,8 +12,8 @@ export const DEFAULT_SETTINGS = {
 
 function readLegacy() {
   return {
-    beginnerMode: localStorage.getItem('stockAddaBeginner') === '1',
-    learnMode: localStorage.getItem('stockAddaLearn') === '1',
+    beginnerMode: localStorage.getItem('scanBhavBeginner') === '1',
+    learnMode: localStorage.getItem('scanBhavLearn') === '1',
   }
 }
 
@@ -38,8 +38,8 @@ export function applySettings(settings) {
 export function saveSettings(settings) {
   const merged = { ...DEFAULT_SETTINGS, ...settings }
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged))
-  localStorage.setItem('stockAddaBeginner', merged.beginnerMode ? '1' : '0')
-  localStorage.setItem('stockAddaLearn', merged.learnMode ? '1' : '0')
+  localStorage.setItem('scanBhavBeginner', merged.beginnerMode ? '1' : '0')
+  localStorage.setItem('scanBhavLearn', merged.learnMode ? '1' : '0')
   applySettings(merged)
   return merged
 }

@@ -1,4 +1,4 @@
-# Stock Adda — Setup Guide
+# Scan Bhav — Setup Guide
 
 Local stock research, quant autopilot desk, and RAG-backed analysis.  
 **Private deployment:** never commit `.env` or broker keys.
@@ -21,14 +21,14 @@ Optional: Zerodha / Groww / FYERS credentials for live trading; Finnhub/Alpha Va
 ## 1. Clone (private GitHub repo)
 
 ```bash
-git clone git@github.com:YOUR_USERNAME/stock-adda.git
-cd stock-adda
+git clone git@github.com:YOUR_USERNAME/scan-bhav.git
+cd scan-bhav
 ```
 
 Or HTTPS:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/stock-adda.git
+git clone https://github.com/YOUR_USERNAME/scan-bhav.git
 ```
 
 ---
@@ -140,8 +140,8 @@ Build installers on each platform (see `packaging/DISTRIBUTION.md`):
 
 User data lives outside the bundle:
 
-- macOS: `~/Library/Application Support/StockAdda`
-- Windows: `%LOCALAPPDATA%\StockAdda`
+- macOS: `~/Library/Application Support/ScanBhav`
+- Windows: `%LOCALAPPDATA%\ScanBhav`
 
 ---
 

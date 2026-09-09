@@ -6,7 +6,7 @@ import { loadStore } from './lib/storage'
 
 export { readScreenUiFromUrl } from './appRoutes'
 
-export const SCREEN_UI_STORAGE_KEY = 'stock-adda-screen-ui-v1'
+export const SCREEN_UI_STORAGE_KEY = 'scan-bhav-screen-ui-v1'
 
 export const DEFAULT_SCREEN_UI = {
   page: 1,

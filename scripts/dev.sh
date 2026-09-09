@@ -134,7 +134,7 @@ run_ui() {
 
 stop_dev_servers
 
-echo "[dev] Stock Adda — backend :$API_PORT + UI :$UI_PORT (RESTART=$RESTART)"
+echo "[dev] Scan Bhav — backend :$API_PORT + UI :$UI_PORT (RESTART=$RESTART)"
 echo "[dev] Press Ctrl+C to stop both"
 
 run_api &

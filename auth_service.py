@@ -14,7 +14,7 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-AUTH_JWT_SECRET = setting("AUTH_JWT_SECRET", "dev-change-me-stock-adda")
+AUTH_JWT_SECRET = setting("AUTH_JWT_SECRET", "dev-change-me-scan-bhav")
 AUTH_JWT_TTL_SECONDS = int(setting("AUTH_JWT_TTL_SECONDS", str(7 * 24 * 3600)))
 FRONTEND_URL = setting("FRONTEND_URL", "http://localhost:5173").rstrip("/")
 AUTH_CALLBACK_BASE = setting("AUTH_CALLBACK_BASE", "http://127.0.0.1:8000").rstrip("/")

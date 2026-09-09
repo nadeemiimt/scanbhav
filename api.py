@@ -12,7 +12,7 @@ from utils.logging_config import configure_logging, get_logger
 configure_logging()
 logger = get_logger(__name__)
 
-app = FastAPI(title="ScanBhav Research API", version="0.6.0")
+app = FastAPI(title="Scan Bhav Research API", version="0.6.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[

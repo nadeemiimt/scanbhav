@@ -5,8 +5,8 @@ import { loadStore, saveStore } from './lib/storage'
 const number = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 })
 const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
 
-const JOURNAL_KEY = 'stockAddaJournal'
-const WATCHLIST_KEY = 'stockAddaWatchlist'
+const JOURNAL_KEY = 'scanBhavJournal'
+const WATCHLIST_KEY = 'scanBhavWatchlist'
 
 const ASK_PRESETS = [
   'Explain RSI for beginners',

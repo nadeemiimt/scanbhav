@@ -34,7 +34,7 @@ export function useBookmarks() {
 
   useEffect(() => {
     function onStorage(e) {
-      if (e.key === 'stockAddaBookmarks') refresh()
+      if (e.key === 'scanBhavBookmarks') refresh()
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)

@@ -2,7 +2,7 @@
 
 import { loadStore, saveStore } from './lib/storage'
 
-export const BOOKMARKS_KEY = 'stockAddaBookmarks'
+export const BOOKMARKS_KEY = 'scanBhavBookmarks'
 
 export function loadBookmarks() {
   const parsed = loadStore(BOOKMARKS_KEY, [])

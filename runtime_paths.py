@@ -6,7 +6,7 @@ import shutil
 import sys
 from pathlib import Path
 
-APP_NAME = "StockAdda"
+APP_NAME = "ScanBhav"
 APP_VERSION = "0.6.0"
 
 
@@ -24,7 +24,7 @@ def user_data_dir() -> Path:
     if not is_frozen():
         return Path(__file__).resolve().parent
 
-    override = os.environ.get("STOCK_ADDA_DATA", "").strip()
+    override = os.environ.get("SCAN_BHAV_DATA", "").strip()
     if override:
         path = Path(override).expanduser().resolve()
         path.mkdir(parents=True, exist_ok=True)
@@ -69,7 +69,7 @@ def _copy_tree(src: Path, dest: Path) -> None:
 
 
 def ensure_first_run() -> None:
-    """Seed ~/StockAdda (or platform equivalent) from bundled templates on first launch."""
+    """Seed ~/ScanBhav (or platform equivalent) from bundled templates on first launch."""
     if not is_frozen():
         return
 

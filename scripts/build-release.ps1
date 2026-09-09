@@ -1,4 +1,4 @@
-# Build Stock Adda distributable for Windows (.exe folder + zip).
+# Build Scan Bhav distributable for Windows (.exe folder + zip).
 # Run in PowerShell on Windows:
 #   .\scripts\build-release.ps1
 
@@ -6,11 +6,11 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $Root
 
-$Version = if ($env:STOCK_ADDA_VERSION) { $env:STOCK_ADDA_VERSION } else { "0.6.0" }
+$Version = if ($env:SCAN_BHAV_VERSION) { $env:SCAN_BHAV_VERSION } else { "0.6.0" }
 $ReleaseDir = Join-Path $Root "dist\release"
-$AppName = "StockAdda"
+$AppName = "ScanBhav"
 
-Write-Host "[release] Stock Adda v$Version"
+Write-Host "[release] Scan Bhav v$Version"
 
 $venvActivate = Join-Path $Root ".venv\Scripts\Activate.ps1"
 if (Test-Path $venvActivate) { . $venvActivate }
@@ -27,22 +27,22 @@ python (Join-Path $Root "packaging\prepare_bundle_data.py")
 
 Write-Host "[release] 3/5 — PyInstaller"
 pip install -q -r (Join-Path $Root "requirements-packaging.txt")
-pyinstaller (Join-Path $Root "packaging\stock_adda.spec") --clean --noconfirm `
+pyinstaller (Join-Path $Root "packaging\scan_bhav.spec") --clean --noconfirm `
     --distpath (Join-Path $Root "dist") `
     --workpath (Join-Path $Root "build\pyinstaller")
 
 New-Item -ItemType Directory -Force -Path $ReleaseDir | Out-Null
-$BundleSrc = Join-Path $Root "dist\StockAdda"
-$BundleDest = Join-Path $ReleaseDir "StockAdda"
+$BundleSrc = Join-Path $Root "dist\ScanBhav"
+$BundleDest = Join-Path $ReleaseDir "ScanBhav"
 if (Test-Path $BundleDest) { Remove-Item -Recurse -Force $BundleDest }
 Copy-Item -Recurse $BundleSrc $BundleDest
 
-$ZipPath = Join-Path $ReleaseDir "StockAdda-Windows-v$Version.zip"
+$ZipPath = Join-Path $ReleaseDir "ScanBhav-Windows-v$Version.zip"
 if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
 Compress-Archive -Path $BundleDest -DestinationPath $ZipPath
 
 Write-Host "[release] 4/5 — done"
 Write-Host "  Folder: $BundleDest"
-Write-Host "  EXE:    $(Join-Path $BundleDest 'StockAdda.exe')"
+Write-Host "  EXE:    $(Join-Path $BundleDest 'ScanBhav.exe')"
 Write-Host "  ZIP:    $ZipPath"
-Write-Host "[release] First launch stores data in %LOCALAPPDATA%\StockAdda"
+Write-Host "[release] First launch stores data in %LOCALAPPDATA%\ScanBhav"

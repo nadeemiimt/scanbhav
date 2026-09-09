@@ -1,4 +1,4 @@
-Stock Adda — Local Portfolio
+Scan Bhav — Local Portfolio
 Updated: 2026-08-05T11:41:06.794962+00:00
 Broker: zerodha
 Tax bracket: slab_30 (30.0%)

@@ -1,9 +1,9 @@
 import { loadStore, saveStore } from '../../lib/storage'
 
-export const SWING_TRADES_KEY = 'stockAddaSwingTrades'
-export const SWING_WATCHLIST_KEY = 'stockAddaSwingWatchlist'
-export const SWING_ALERTS_KEY = 'stockAddaSwingAlerts'
-export const SWING_BROKER_KEY = 'stockAddaSwingBroker'
+export const SWING_TRADES_KEY = 'scanBhavSwingTrades'
+export const SWING_WATCHLIST_KEY = 'scanBhavSwingWatchlist'
+export const SWING_ALERTS_KEY = 'scanBhavSwingAlerts'
+export const SWING_BROKER_KEY = 'scanBhavSwingBroker'
 
 export const DEFAULT_BROKER = {
   broker: 'stub',
@@ -84,7 +84,7 @@ export function isDuplicatePlan(trades, symbol, entry, excludeId) {
 }
 
 export function appendJournalEntry(trade, note) {
-  const key = 'stockAddaRichJournal'
+  const key = 'scanBhavRichJournal'
   const entries = loadStore(key, [])
   entries.unshift({
     id: `${Date.now()}`,

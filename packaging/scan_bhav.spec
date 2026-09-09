@@ -1,5 +1,5 @@
-# PyInstaller spec — Stock Adda desktop bundle
-# Build: pyinstaller packaging/stock_adda.spec --clean --noconfirm
+# PyInstaller spec — Scan Bhav desktop bundle
+# Build: pyinstaller packaging/scan_bhav.spec --clean --noconfirm
 
 import sys
 from pathlib import Path
@@ -86,7 +86,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="StockAdda",
+    name="ScanBhav",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -107,18 +107,18 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name="StockAdda",
+    name="ScanBhav",
 )
 
 if sys.platform == "darwin":
     app = BUNDLE(
         coll,
-        name="StockAdda.app",
+        name="ScanBhav.app",
         icon=None,
-        bundle_identifier="com.stockadda.desktop",
+        bundle_identifier="com.scanbhav.desktop",
         info_plist={
-            "CFBundleName": "Stock Adda",
-            "CFBundleDisplayName": "Stock Adda",
+            "CFBundleName": "Scan Bhav",
+            "CFBundleDisplayName": "Scan Bhav",
             "CFBundleVersion": "0.6.0",
             "CFBundleShortVersionString": "0.6.0",
             "NSHighResolutionCapable": True,

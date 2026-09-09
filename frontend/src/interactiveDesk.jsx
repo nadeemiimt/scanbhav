@@ -7,8 +7,8 @@ const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR
 
 export { number, money }
 
-const WIZARD_KEY = 'stockAddaWizard'
-const WATCHLIST_KEY = 'stockAddaWatchlist'
+const WIZARD_KEY = 'scanBhavWizard'
+const WATCHLIST_KEY = 'scanBhavWatchlist'
 
 const WIZARD_GOALS = [
   { id: 'grow', label: 'Grow wealth' },

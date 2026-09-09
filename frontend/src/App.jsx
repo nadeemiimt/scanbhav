@@ -193,7 +193,7 @@ export default function App() {
   const deskMode = siteSettings.deskMode || 'mis'
   const navItems = useMemo(() => visiblePrimaryNav(deskMode), [deskMode])
   const horizonIds = useMemo(() => visibleHorizons(deskMode), [deskMode])
-  const [wizardOpen, setWizardOpen] = useState(() => !localStorage.getItem('stockAddaWizard'))
+  const [wizardOpen, setWizardOpen] = useState(() => !localStorage.getItem('scanBhavWizard'))
   const [deskTool, setDeskTool] = useState(null) // compare | ask | practice | size | journal
   const [comparePair, setComparePair] = useState({ left: '', right: '' })
   const [moreTool, setMoreTool] = useState(null)
@@ -1944,7 +1944,7 @@ export default function App() {
         currentTab={tab}
         onNavigate={id => go(id)}
         onRerunWizard={() => {
-          localStorage.removeItem('stockAddaWizard')
+          localStorage.removeItem('scanBhavWizard')
           setWizardOpen(true)
         }}
       />

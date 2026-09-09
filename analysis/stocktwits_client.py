@@ -9,11 +9,11 @@ from requests.auth import HTTPBasicAuth
 
 
 def _username() -> Optional[str]:
-    return os.environ.get("STOCKTWITS_USERNAME") or os.environ.get("STOCK_ADDA_STOCKTWITS_USERNAME")
+    return os.environ.get("STOCKTWITS_USERNAME") or os.environ.get("SCAN_BHAV_STOCKTWITS_USERNAME")
 
 
 def _password() -> Optional[str]:
-    return os.environ.get("STOCKTWITS_PASSWORD") or os.environ.get("STOCK_ADDA_STOCKTWITS_PASSWORD")
+    return os.environ.get("STOCKTWITS_PASSWORD") or os.environ.get("SCAN_BHAV_STOCKTWITS_PASSWORD")
 
 
 def stocktwits_configured() -> bool:

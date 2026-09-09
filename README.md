@@ -1,6 +1,4 @@
-# Stock Adda — Local Stock Analyzer (Ollama + Chroma RAG)
-
-This starter project keeps your PDFs, embeddings, vector database, and LLM calls on your machine.
+# Scan Bhav — Local Stock Analyzer (Ollama + Chroma RAG)
 
 **New clone?** Follow [SETUP.md](SETUP.md) for install, Ollama, RAG, and autopilot desk setup.
 
@@ -129,15 +127,15 @@ Ship a standalone app (no Python/Node install for end users):
 
 | Platform | Build command | Output |
 | --- | --- | --- |
-| **macOS** | `./scripts/build-release.sh` | `dist/release/StockAdda.app`, `.dmg`, `.zip` |
-| **Windows** | `.\scripts\build-release.ps1` | `dist\release\StockAdda\StockAdda.exe` + `.zip` |
+| **macOS** | `./scripts/build-release.sh` | `dist/release/ScanBhav.app`, `.dmg`, `.zip` |
+| **Windows** | `.\scripts\build-release.ps1` | `dist\release\ScanBhav\ScanBhav.exe` + `.zip` |
 
 Build **Mac on macOS** and **Windows on Windows** (PyInstaller is platform-specific).
 
 First launch opens `http://127.0.0.1:8000` and stores user data in:
 
-- macOS: `~/Library/Application Support/StockAdda`
-- Windows: `%LOCALAPPDATA%\StockAdda`
+- macOS: `~/Library/Application Support/ScanBhav`
+- Windows: `%LOCALAPPDATA%\ScanBhav`
 
 Full details: [packaging/DISTRIBUTION.md](packaging/DISTRIBUTION.md)
 

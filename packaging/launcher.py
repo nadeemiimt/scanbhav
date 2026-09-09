@@ -1,4 +1,4 @@
-"""Stock Adda desktop launcher — starts the local API and opens the dashboard."""
+"""Scan Bhav desktop launcher — starts the local API and opens the dashboard."""
 from __future__ import annotations
 
 import argparse
@@ -24,7 +24,7 @@ def _configure_logging() -> None:
 
     handlers: list[logging.Handler] = [logging.StreamHandler(sys.stdout)]
     if is_frozen():
-        log_file = logs_dir() / "stock-adda.log"
+        log_file = logs_dir() / "scan-bhav.log"
         handlers.append(logging.FileHandler(log_file, encoding="utf-8"))
 
     logging.basicConfig(
@@ -47,9 +47,9 @@ def main(argv: list[str] | None = None) -> int:
     _setup_paths()
     _configure_logging()
 
-    parser = argparse.ArgumentParser(description="Stock Adda — local research & autopilot desk")
-    parser.add_argument("--host", default=os.environ.get("STOCK_ADDA_HOST", "127.0.0.1"))
-    parser.add_argument("--port", type=int, default=int(os.environ.get("STOCK_ADDA_PORT", "8000")))
+    parser = argparse.ArgumentParser(description="Scan Bhav — local research & autopilot desk")
+    parser.add_argument("--host", default=os.environ.get("SCAN_BHAV_HOST", "127.0.0.1"))
+    parser.add_argument("--port", type=int, default=int(os.environ.get("SCAN_BHAV_PORT", "8000")))
     parser.add_argument("--no-browser", action="store_true", help="Do not open a browser tab")
     args = parser.parse_args(argv)
 

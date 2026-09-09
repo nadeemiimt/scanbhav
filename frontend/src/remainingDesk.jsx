@@ -5,24 +5,24 @@ import { loadStore, saveStore } from './lib/storage'
 const number = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 })
 const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
 
-const NOTIFY_KEY = 'stockAddaNotify'
-const RICH_JOURNAL_KEY = 'stockAddaRichJournal'
-const CURRICULUM_KEY = 'stockAddaCurriculum'
+const NOTIFY_KEY = 'scanBhavNotify'
+const RICH_JOURNAL_KEY = 'scanBhavRichJournal'
+const CURRICULUM_KEY = 'scanBhavCurriculum'
 
 const ACCOUNT_KEYS = [
-  'stockAddaWizard',
-  'stockAddaWatchlist',
-  'stockAddaJournal',
-  'stockAddaRichJournal',
-  'stockAddaBeginner',
-  'stockAddaLearn',
-  'stockAddaNotify',
-  'stockAddaCurriculum',
-  'stockAddaSwingTrades',
-  'stockAddaSwingWatchlist',
-  'stockAddaSwingAlerts',
-  'stockAddaSwingBroker',
-  'stockAddaSettings',
+  'scanBhavWizard',
+  'scanBhavWatchlist',
+  'scanBhavJournal',
+  'scanBhavRichJournal',
+  'scanBhavBeginner',
+  'scanBhavLearn',
+  'scanBhavNotify',
+  'scanBhavCurriculum',
+  'scanBhavSwingTrades',
+  'scanBhavSwingWatchlist',
+  'scanBhavSwingAlerts',
+  'scanBhavSwingBroker',
+  'scanBhavSettings',
 ]
 
 const REMAINING_TOOLS = [
@@ -1149,7 +1149,7 @@ export function ExportCenter({ analysis, genaiResult, holdings = [] }) {
         if (!analysis) throw new Error('Analyze a symbol first.')
         rows = briefCsvRows()
       } else if (kind === 'watchlist') {
-        rows = loadStore('stockAddaWatchlist', [])
+        rows = loadStore('scanBhavWatchlist', [])
           .map(s => (typeof s === 'string' ? { symbol: s } : s))
       } else if (kind === 'journal') {
         rows = loadStore(RICH_JOURNAL_KEY, [])
@@ -1160,7 +1160,7 @@ export function ExportCenter({ analysis, genaiResult, holdings = [] }) {
       const data = await apiPost('/api/desk/export-csv', { kind, rows, symbol: analysis?.symbol })
       downloadBlob(
         new Blob([data.csv || ''], { type: 'text/csv;charset=utf-8' }),
-        data.filename || `stock_adda_${kind}.csv`,
+        data.filename || `scan_bhav_${kind}.csv`,
       )
       setStatus(`${kind} CSV downloaded (${data.row_count ?? 0} rows)`)
     } catch (err) {
@@ -1179,9 +1179,9 @@ export function ExportCenter({ analysis, genaiResult, holdings = [] }) {
       const data = await apiPost('/api/desk/import-csv', { kind: importKind, csv_text })
 
       if (importKind === 'watchlist') {
-        const existing = loadStore('stockAddaWatchlist', [])
+        const existing = loadStore('scanBhavWatchlist', [])
         const merged = [...new Set([...(existing || []), ...(data.symbols || [])])]
-        saveStore('stockAddaWatchlist', merged)
+        saveStore('scanBhavWatchlist', merged)
         setStatus(`Imported ${data.count || 0} symbols into watchlist (${merged.length} total)`)
       } else if (importKind === 'journal') {
         const existing = loadStore(RICH_JOURNAL_KEY, [])
@@ -1194,7 +1194,7 @@ export function ExportCenter({ analysis, genaiResult, holdings = [] }) {
           + 'Open Portfolio and Purchase to add paper lots (CSV is a checklist, not auto-buy).',
         )
         if (data.holdings?.length) {
-          sessionStorage.setItem('stockAddaHoldingsImport', JSON.stringify(data.holdings))
+          sessionStorage.setItem('scanBhavHoldingsImport', JSON.stringify(data.holdings))
         }
       }
     } catch (err) {
@@ -1212,9 +1212,9 @@ export function ExportCenter({ analysis, genaiResult, holdings = [] }) {
       const form = new FormData()
       form.append('file', file)
       const data = await apiPostForm('/api/desk/import-pdf', form)
-      const existing = loadStore('stockAddaWatchlist', [])
+      const existing = loadStore('scanBhavWatchlist', [])
       const merged = [...new Set([...(existing || []), ...(data.symbols || [])])]
-      saveStore('stockAddaWatchlist', merged)
+      saveStore('scanBhavWatchlist', merged)
       setStatus(
         `PDF scanned — added ${data.symbol_count || 0} symbols to watchlist `
         + `(${merged.length} total). Preview: ${(data.text_preview || '').slice(0, 80)}…`,
@@ -1472,7 +1472,7 @@ export function AccountSync() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `stock_adda_sync_${new Date().toISOString().slice(0, 10)}.json`
+      a.download = `scan_bhav_sync_${new Date().toISOString().slice(0, 10)}.json`
       a.click()
       URL.revokeObjectURL(url)
       setStatus('Bundle exported')

@@ -3,17 +3,17 @@
 const DEV = import.meta.env.DEV
 
 export function logDebug(...args) {
-  if (DEV) console.debug('[stock-adda]', ...args)
+  if (DEV) console.debug('[scan-bhav]', ...args)
 }
 
 export function logInfo(...args) {
-  if (DEV) console.info('[stock-adda]', ...args)
+  if (DEV) console.info('[scan-bhav]', ...args)
 }
 
 export function logWarn(...args) {
-  console.warn('[stock-adda]', ...args)
+  console.warn('[scan-bhav]', ...args)
 }
 
 export function logError(...args) {
-  console.error('[stock-adda]', ...args)
+  console.error('[scan-bhav]', ...args)
 }

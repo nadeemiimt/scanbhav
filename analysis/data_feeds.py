@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 
 def _key(name: str) -> Optional[str]:
-    return os.environ.get(name) or os.environ.get(f"STOCK_ADDA_{name}")
+    return os.environ.get(name) or os.environ.get(f"SCAN_BHAV_{name}")
 
 
 def fetch_rbi_macro() -> dict[str, Any]:

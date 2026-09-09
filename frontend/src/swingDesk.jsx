@@ -796,7 +796,7 @@ function SwingAlertsPanel({ alerts, setAlerts, watchlist, setup, onError }) {
   }
 
   async function checkAlerts(quotes) {
-    const notify = loadStore('stockAddaNotify', {})
+    const notify = loadStore('scanBhavNotify', {})
     const fired = []
     for (const a of alerts) {
       const price = quotes[a.symbol]?.price ?? setup?.price
