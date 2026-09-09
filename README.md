@@ -2,7 +2,9 @@
 
 This starter project keeps your PDFs, embeddings, vector database, and LLM calls on your machine.
 
-**New clone?** Follow [SETUP.md](SETUP.md) for install, Ollama, RAG, and autopilot desk setup. Your books teach the evaluation framework; the stock JSON supplies the company facts.
+**New clone?** Follow [SETUP.md](SETUP.md) for install, Ollama, RAG, and autopilot desk setup.
+
+This project keeps your PDFs, embeddings, vector database, and LLM calls on your machine. Your books teach the evaluation framework; the stock JSON supplies the company facts.
 
 ## 1. Prerequisites
 
