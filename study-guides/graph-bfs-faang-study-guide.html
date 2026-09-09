@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graph BFS/DFS Interview Guide — 5 Core Patterns + FAANG Remixes</title>
+<style>
+  :root {
+    --bg: #1a1d23;
+    --surface: #242830;
+    --surface2: #2e333d;
+    --text: #e4e6eb;
+    --text-muted: #a8adb8;
+    --accent: #6db3f2;
+    --accent2: #8bc4a8;
+    --border: #3a404c;
+    --code-bg: #161920;
+    --link: #7ec8e3;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    font-size: 16px;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+  .offline-note {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    padding: 0.75rem 1rem;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+  }
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  h2 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--border);
+    color: var(--accent);
+  }
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.75rem;
+    color: var(--accent2);
+  }
+  p { margin-bottom: 0.75rem; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 0 2rem;
+    border-radius: 4px;
+  }
+  nav.toc h2 { margin-top: 0; border: none; font-size: 1.1rem; color: var(--text); }
+  nav.toc ul { list-style: none; columns: 2; column-gap: 2rem; }
+  nav.toc li { margin: 0.3rem 0; break-inside: avoid; }
+  nav.toc a { font-size: 0.92rem; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0 1.5rem;
+    font-size: 0.92rem;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 0.6rem 0.8rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: var(--surface2); color: var(--accent); font-weight: 600; }
+  td { background: var(--surface); }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin: 0.5rem 0 1rem;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+  }
+  .meta span strong { color: var(--text); }
+  .problem-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 0;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    overflow-x: auto;
+    margin: 0.75rem 0 1rem;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  code { font-family: "Cascadia Code", "Fira Code", Consolas, monospace; color: #c5d4e8; }
+  ul.explain { margin: 0.5rem 0 0 1.25rem; }
+  ul.explain li { margin: 0.35rem 0; font-size: 0.93rem; }
+  @media print {
+    body { background: #fff; color: #111; max-width: 100%; padding: 1rem; }
+    .offline-note { border-color: #999; background: #f5f5f5; }
+    h2 { color: #222; border-color: #ccc; }
+    h3 { color: #333; }
+    .problem-block, th, td, nav.toc, pre { background: #f9f9f9; border-color: #ccc; }
+    pre { background: #f0f0f0; }
+    code { color: #111; }
+    a { color: #0066cc; }
+    nav.toc ul { columns: 1; }
+  }
+  @media (max-width: 600px) {
+    nav.toc ul { columns: 1; }
+  }
+
+  .complexity {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    margin: 12px 0 16px;
+    padding: 10px 14px;
+    background: var(--code-bg, #1e1e2e);
+    border: 1px solid var(--border, #333);
+    border-radius: 6px;
+    font-size: 0.92rem;
+  }
+  .complexity strong { color: var(--accent, #7aa2f7); margin-right: 6px; }
+
+
+  .problem-statement {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+    margin: 0.75rem 0 1rem;
+  }
+  .problem-statement h4 { margin: 0 0 0.5rem; font-size: 1rem; color: var(--accent); border: none; }
+  .problem-statement p { margin: 0.4rem 0; color: var(--text); }
+  .problem-statement .ask { color: var(--accent2); font-weight: 600; }
+  .examples-block { margin: 0.75rem 0; }
+  .examples-block pre {
+    margin: 0.35rem 0 0.75rem;
+    white-space: pre-wrap;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="offline-note">Saved offline — open this file in any browser anytime.</div>
+
+<h1>Graph BFS/DFS Interview Guide — 5 Core Patterns + FAANG Remixes</h1>
+
+<nav class="toc" id="toc">
+  <h2>Table of Contents</h2>
+  <ul>
+    <li><a href="#master-key">A. Master Key (5 Patterns)</a></li>
+    <li><a href="#core-islands">Core: Number of Islands (LC 200)</a></li>
+    <li><a href="#core-oranges">Core: Rotting Oranges (LC 994)</a></li>
+    <li><a href="#core-ladder">Core: Word Ladder (LC 127)</a></li>
+    <li><a href="#core-surrounded">Core: Surrounded Regions (LC 130)</a></li>
+    <li><a href="#core-cycle">Core: Cycle Detection / Course Schedule (LC 207)</a></li>
+    <li><a href="#p695">1. Max Area of Island (695)</a></li>
+    <li><a href="#p547">2. Number of Provinces (547)</a></li>
+    <li><a href="#p733">3. Flood Fill (733)</a></li>
+    <li><a href="#p130">4. Surrounded Regions (130)</a></li>
+    <li><a href="#p417">5. Pacific Atlantic Water Flow (417)</a></li>
+    <li><a href="#p542">6. 01 Matrix (542)</a></li>
+    <li><a href="#p286">7. Walls and Gates (286)</a></li>
+    <li><a href="#p934">8. Shortest Bridge (934)</a></li>
+    <li><a href="#p1091">9. Shortest Path in Binary Matrix (1091)</a></li>
+    <li><a href="#p79">10. Word Search (79)</a></li>
+    <li><a href="#p752">11. Open the Lock (752)</a></li>
+    <li><a href="#p1197">12. Minimum Knight Moves (1197)</a></li>
+    <li><a href="#p841">13. Keys and Rooms (841)</a></li>
+    <li><a href="#p207">14. Course Schedule (207)</a></li>
+    <li><a href="#p133">15. Clone Graph (133)</a></li>
+    <li><a href="#p778">16. Swim in Rising Water (778)</a></li>
+  </ul>
+</nav>
+
+<!-- ========== SECTION A: MASTER KEY ========== -->
+<h2 id="master-key">A. Master Key — 5 Patterns</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Pattern</th>
+      <th>Core Problem</th>
+      <th>When to Use</th>
+      <th>Key Technique</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Islands (DFS/BFS)</strong></td>
+      <td>LC 200 Number of Islands</td>
+      <td>Connected components on a grid; count/flood/measure regions</td>
+      <td>Mark visited cells; recurse or queue 4-directional neighbors</td>
+    </tr>
+    <tr>
+      <td><strong>Oranges (Multi-source BFS)</strong></td>
+      <td>LC 994 Rotting Oranges</td>
+      <td>Simultaneous spread from multiple sources; minimum time/distance layers</td>
+      <td>Seed queue with all sources at time 0; process level by level</td>
+    </tr>
+    <tr>
+      <td><strong>Ladder (BFS on implicit graph)</strong></td>
+      <td>LC 127 Word Ladder</td>
+      <td>Shortest path in unweighted state space; word/puzzle transformations</td>
+      <td>Enqueue start state; explore neighbors; track visited to avoid cycles</td>
+    </tr>
+  
+    <tr>
+      <td><strong>Surrounded (Border flood)</strong></td>
+      <td>LC 130 Surrounded Regions</td>
+      <td>Capture regions that cannot reach the border</td>
+      <td>Seed all border O; flood mark safe; flip leftover O → X</td>
+    </tr>
+    <tr>
+      <td><strong>Cycle (Directed)</strong></td>
+      <td>LC 207 Course Schedule</td>
+      <td>Detect cycle in a directed graph</td>
+      <td>DFS 3-color (GRAY back-edge) or Kahn BFS (leftover nodes)</td>
+    </tr>
+</tbody>
+</table>
+
+<!-- ========== CORE PROBLEM 1 ========== -->
+<h2 id="core-islands">Core Problem: Number of Islands (LC 200)</h2>
+<div class="problem-block">
+  <div class="meta">
+    <span><strong>Pattern:</strong> Islands (iterative BFS / Stack DFS)</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <div class="problem-statement">
+    <h4>Problem</h4>
+    <p>Given an m × n 2D binary grid of <code>'1'</code> (land) and <code>'0'</code> (water), return the number of islands. An island is formed by connecting adjacent lands <strong>horizontally or vertically</strong> (4 directions only). Assume all four edges are surrounded by water.</p>
+    <p class="ask">Ask: How many separate land groups (connected components)?</p>
+    <div class="examples-block">
+      <strong>Example 1:</strong> grid with one big land blob → <code>1</code><br/>
+      <strong>Example 2:</strong> three disconnected land groups (diagonals do not count) → <code>3</code>
+    </div>
+  </div>
+
+  <p>Count connected components of '1' in a binary grid. <strong>Prefer iterative</strong> flood-fill — recursive DFS can StackOverflow on a huge island.</p>
+
+    <div class="complexity">
+    <div><strong>Time:</strong> O(R · C)</div>
+    <div><strong>Space:</strong> O(R · C) queue/stack</div>
+    <div style="flex-basis:100%;opacity:0.75;font-size:0.85rem">Each cell visited at most once. Recursive DFS same time; call-stack space risks overflow.</div>
+  </div>
+<h3>Recommended: iterative BFS (Queue)</h3>
+  <pre><code>import java.util.ArrayDeque;
+import java.util.Queue;
+
+class Solution {
+    private static final int[][] DIRS = {{1,0},{-1,0},{0,1},{0,-1}};
+
+    public int numIslands(char[][] grid) {
+        if (grid == null || grid.length == 0) return 0;
+        int rows = grid.length, cols = grid[0].length, islands = 0;
+
+        for (int r = 0; r &lt; rows; r++) {
+            for (int c = 0; c &lt; cols; c++) {
+                if (grid[r][c] != '1') continue;
+                islands++;
+                Queue&lt;int[]&gt; q = new ArrayDeque&lt;&gt;();
+                q.offer(new int[]{r, c});
+                grid[r][c] = '0';
+                while (!q.isEmpty()) {
+                    int[] cur = q.poll();
+                    for (int[] d : DIRS) {
+                        int nr = cur[0] + d[0], nc = cur[1] + d[1];
+                        if (nr &lt; 0 || nc &lt; 0 || nr &gt;= rows || nc &gt;= cols
+                                || grid[nr][nc] != '1') continue;
+                        grid[nr][nc] = '0';
+                        q.offer(new int[]{nr, nc});
+                    }
+                }
+            }
+        }
+        return islands;
+    }
+}</code></pre>
+
+  <h3>Alternative: iterative DFS (Stack)</h3>
+  <pre><code>import java.util.ArrayDeque;
+import java.util.Deque;
+
+class Solution {
+    private static final int[][] DIRS = {{1,0},{-1,0},{0,1},{0,-1}};
+
+    public int numIslands(char[][] grid) {
+        if (grid == null || grid.length == 0) return 0;
+        int rows = grid.length, cols = grid[0].length, islands = 0;
+
+        for (int r = 0; r &lt; rows; r++) {
+            for (int c = 0; c &lt; cols; c++) {
+                if (grid[r][c] != '1') continue;
+                islands++;
+                Deque&lt;int[]&gt; stack = new ArrayDeque&lt;&gt;();
+                stack.push(new int[]{r, c});
+                grid[r][c] = '0';
+                while (!stack.isEmpty()) {
+                    int[] cur = stack.pop();
+                    for (int[] d : DIRS) {
+                        int nr = cur[0] + d[0], nc = cur[1] + d[1];
+                        if (nr &lt; 0 || nc &lt; 0 || nr &gt;= rows || nc &gt;= cols
+                                || grid[nr][nc] != '1') continue;
+                        grid[nr][nc] = '0';
+                        stack.push(new int[]{nr, nc});
+                    }
+                }
+            }
+        }
+        return islands;
+    }
+}</code></pre>
+
+  <h3>Recursive DFS (small grids only)</h3>
+  <pre><code>class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    public int numIslands(char[][] grid) {
+        if (grid == null || grid.length == 0) return 0;
+        int rows = grid.length, cols = grid[0].length, count = 0;
+        for (int r = 0; r &lt; rows; r++) {
+            for (int c = 0; c &lt; cols; c++) {
+                if (grid[r][c] == '1') {
+                    count++;
+                    dfs(grid, r, c); // pass cell (r,c), not dimensions
+                }
+            }
+        }
+        return count;
+    }
+
+    private void dfs(char[][] grid, int r, int c) {
+        if (r &lt; 0 || c &lt; 0 || r &gt;= grid.length || c &gt;= grid[0].length
+                || grid[r][c] != '1') return;
+        grid[r][c] = '0';
+        for (int[] d : DIRS) dfs(grid, r + d[0], c + d[1]);
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Each unvisited '1' starts a new island; increment before flooding.</li>
+    <li>Mark visited when you enqueue/push ('1' → '0') so cells are not added twice.</li>
+    <li>Queue = BFS, Stack = iterative DFS — same answer, heap space (safe on large islands).</li>
+    <li>Recursive DFS risks StackOverflowError when one island is very deep/large.</li>
+    <li>Time O(m·n), extra space O(m·n) for the queue/stack.</li>
+  </ul>
+</div>
+
+<!-- ========== CORE PROBLEM 2 ========== -->
+<h2 id="core-oranges">Core Problem: Rotting Oranges (LC 994)</h2>
+<div class="problem-block">
+  <div class="meta">
+    <span><strong>Pattern:</strong> Oranges (Multi-source BFS)</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <div class="problem-statement">
+    <h4>Problem</h4>
+    <p>Grid cells are 0 (empty), 1 (fresh), or 2 (rotten). Every minute, fresh oranges 4-adjacent to a rotten orange become rotten. Return minutes until no fresh orange remains, or <code>-1</code> if impossible.</p>
+    <p class="ask">Ask: How long until everything is infected? (multi-source BFS)</p>
+    <div class="examples-block">
+      <strong>Example:</strong> <code>[[2,1,1],[1,1,0],[0,1,1]]</code> → <code>4</code>
+    </div>
+  </div>
+
+  <p>Return minutes until all oranges rot, or -1 if impossible.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(R · C)</div>
+    <div><strong>Space:</strong> O(R · C) queue</div>
+    <div style="flex-basis:100%;opacity:0.75;font-size:0.85rem">Every cell processed at most once. BFS layers = minutes.</div>
+  </div>
+<pre><code>class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    public int orangesRotting(int[][] grid) {
+        int rows = grid.length, cols = grid[0].length;
+        ArrayDeque&lt;int[]&gt; q = new ArrayDeque&lt;&gt;();
+        int fresh = 0;
+        for (int r = 0; r &lt; rows; r++) {
+            for (int c = 0; c &lt; cols; c++) {
+                if (grid[r][c] == 2) q.offer(new int[]{r, c});
+                else if (grid[r][c] == 1) fresh++;
+            }
+        }
+        if (fresh == 0) return 0;
+        int minutes = 0;
+        while (!q.isEmpty()) {
+            int size = q.size();
+            boolean rotted = false;
+            for (int i = 0; i &lt; size; i++) {
+                int[] cell = q.poll();
+                for (int[] d : DIRS) {
+                    int nr = cell[0] + d[0], nc = cell[1] + d[1];
+                    if (nr &gt;= 0 &amp;&amp; nc &gt;= 0 &amp;&amp; nr &lt; rows &amp;&amp; nc &lt; cols &amp;&amp; grid[nr][nc] == 1) {
+                        grid[nr][nc] = 2;
+                        fresh--;
+                        q.offer(new int[]{nr, nc});
+                        rotted = true;
+                    }
+                }
+            }
+            if (rotted) minutes++;
+        }
+        return fresh == 0 ? minutes : -1;
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Seed the queue with every rotten orange (multi-source BFS).</li>
+    <li>Process level-by-level; each full round is one minute.</li>
+    <li>Track fresh count; decrement when an orange rots.</li>
+    <li>Return -1 if any fresh orange remains after BFS completes.</li>
+    <li>Time O(m·n), space O(m·n) for the queue.</li>
+  </ul>
+</div>
+
+<!-- ========== CORE PROBLEM 3 ========== -->
+<h2 id="core-ladder">Core Problem: Word Ladder (LC 127)</h2>
+<div class="problem-block">
+  <div class="meta">
+    <span><strong>Pattern:</strong> Ladder (BFS shortest path)</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <div class="problem-statement">
+    <h4>Problem</h4>
+    <p>Transform <code>beginWord</code> into <code>endWord</code> by changing one letter at a time; each intermediate word must be in <code>wordList</code>. Return the number of words in the shortest transformation sequence, or 0 if impossible.</p>
+    <p class="ask">Ask: Shortest path in an unweighted word graph?</p>
+    <div class="examples-block">
+      <strong>Example:</strong> hit → cog with wordList hot,dot,dog,lot,log,cog → <code>5</code> (hit→hot→dot→dog→cog)
+    </div>
+  </div>
+
+  <p>Find shortest transformation sequence length from beginWord to endWord.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(N · L · 26)</div>
+    <div><strong>Space:</strong> O(N) set + queue</div>
+    <div style="flex-basis:100%;opacity:0.75;font-size:0.85rem">N = dictionary size, L = word length. Each word enqueued at most once.</div>
+  </div>
+<pre><code>class Solution {
+    public int ladderLength(String beginWord, String endWord, List&lt;String&gt; wordList) {
+        Set&lt;String&gt; dict = new HashSet&lt;&gt;(wordList);
+        if (!dict.contains(endWord)) return 0;
+        ArrayDeque&lt;String&gt; q = new ArrayDeque&lt;&gt;();
+        Set&lt;String&gt; visited = new HashSet&lt;&gt;();
+        q.offer(beginWord);
+        visited.add(beginWord);
+        int level = 1;
+        while (!q.isEmpty()) {
+            int size = q.size();
+            for (int i = 0; i &lt; size; i++) {
+                String word = q.poll();
+                if (word.equals(endWord)) return level;
+                char[] chars = word.toCharArray();
+                for (int j = 0; j &lt; chars.length; j++) {
+                    char orig = chars[j];
+                    for (char c = 'a'; c &lt;= 'z'; c++) {
+                        if (c == orig) continue;
+                        chars[j] = c;
+                        String next = new String(chars);
+                        if (!dict.contains(next) || visited.contains(next)) continue;
+                        if (next.equals(endWord)) return level + 1;
+                        visited.add(next);
+                        q.offer(next);
+                    }
+                    chars[j] = orig;
+                }
+            }
+            level++;
+        }
+        return 0;
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Model words as nodes; edges connect words differing by one letter.</li>
+    <li>BFS guarantees shortest path in an unweighted graph.</li>
+    <li>Level-by-level processing tracks transformation count.</li>
+    <li>Early exit when endWord is reached saves work.</li>
+    <li>Time O(N · L² · 26) where N = wordList size, L = word length.</li>
+  </ul>
+</div>
+
+
+<!-- ========== CORE PROBLEM 4 ========== -->
+<h2 id="core-surrounded">Core Problem: Surrounded Regions (LC 130)</h2>
+<div class="problem-block">
+  <div class="meta">
+    <span><strong>Pattern:</strong> Border flood (Islands twin)</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <div class="problem-statement">
+    <h4>Problem</h4>
+    <p>Given a board of <code>'X'</code> and <code>'O'</code>, capture all regions of <code>'O'</code> that are fully surrounded by <code>'X'</code> (flip those <code>'O'</code> to <code>'X'</code>). Any <code>'O'</code> on the border, or connected to a border <code>'O'</code>, cannot be captured. Modify the board in-place.</p>
+    <p class="ask">Ask: Which O regions cannot escape to the border?</p>
+  </div>
+
+  <p>Capture all regions of <code>O</code> that are fully surrounded by <code>X</code>. Any <code>O</code> connected to the border is safe.</p>
+  <div class="complexity">
+    <div><strong>Time:</strong> O(R · C)</div>
+    <div><strong>Space:</strong> O(R · C) queue/stack</div>
+    <div style="flex-basis:100%;opacity:0.75;font-size:0.85rem">Prefer iterative flood from borders on large boards.</div>
+  </div>
+  <h3>Memory hook: Save the border first</h3>
+  <p>Do not hunt interior regions. Mark everything reachable from the border as safe (<code>S</code>), then flip remaining <code>O</code> → <code>X</code>, restore <code>S</code> → <code>O</code>.</p>
+  <h4>Java — iterative BFS (recommended)</h4>
+  <pre><code>import java.util.ArrayDeque;
+import java.util.Queue;
+
+class Solution {
+    private static final int[][] DIRS = {{1,0},{-1,0},{0,1},{0,-1}};
+
+    public void solve(char[][] board) {
+        if (board == null || board.length == 0) return;
+        int rows = board.length, cols = board[0].length;
+        Queue&lt;int[]&gt; q = new ArrayDeque&lt;&gt;();
+
+        for (int r = 0; r &lt; rows; r++) {
+            if (board[r][0] == 'O') { board[r][0] = 'S'; q.offer(new int[]{r, 0}); }
+            if (board[r][cols - 1] == 'O') {
+                board[r][cols - 1] = 'S'; q.offer(new int[]{r, cols - 1});
+            }
+        }
+        for (int c = 0; c &lt; cols; c++) {
+            if (board[0][c] == 'O') { board[0][c] = 'S'; q.offer(new int[]{0, c}); }
+            if (board[rows - 1][c] == 'O') {
+                board[rows - 1][c] = 'S'; q.offer(new int[]{rows - 1, c});
+            }
+        }
+
+        while (!q.isEmpty()) {
+            int[] cur = q.poll();
+            for (int[] d : DIRS) {
+                int nr = cur[0] + d[0], nc = cur[1] + d[1];
+                if (nr &lt; 0 || nc &lt; 0 || nr &gt;= rows || nc &gt;= cols
+                        || board[nr][nc] != 'O') continue;
+                board[nr][nc] = 'S';
+                q.offer(new int[]{nr, nc});
+            }
+        }
+
+        for (int r = 0; r &lt; rows; r++) {
+            for (int c = 0; c &lt; cols; c++) {
+                if (board[r][c] == 'O') board[r][c] = 'X';
+                else if (board[r][c] == 'S') board[r][c] = 'O';
+            }
+        }
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Border O can never be captured — seed them first.</li>
+    <li>Flood marks the entire escape-connected region as S.</li>
+    <li>Leftover O are fully enclosed → flip to X.</li>
+    <li>Restore S → O. Same paintbrush as Islands, different start points.</li>
+  </ul>
+</div>
+
+<!-- ========== CORE PROBLEM 5 ========== -->
+<h2 id="core-cycle">Core Problem: Cycle Detection in Directed Graphs (LC 207)</h2>
+<div class="problem-block">
+  <div class="meta">
+    <span><strong>Pattern:</strong> DFS 3-color / Kahn BFS</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <div class="problem-statement">
+    <h4>Problem</h4>
+    <p>There are <code>numCourses</code> courses (0 … n-1). <code>prerequisites[i] = [ai, bi]</code> means you must take <code>bi</code> before <code>ai</code> (edge bi → ai). Return true if you can finish all courses (no cycle); otherwise false.</p>
+    <p class="ask">Ask: Does this directed graph have a cycle?</p>
+    <div class="examples-block">
+      <strong>Example 1:</strong> n=2, [[1,0]] → true<br/>
+      <strong>Example 2:</strong> n=2, [[1,0],[0,1]] → false (cycle)
+    </div>
+  </div>
+
+  <p>Course Schedule: return true if you can finish all courses (no cycle in the prerequisite graph).</p>
+  <div class="complexity">
+    <div><strong>Time:</strong> O(V + E)</div>
+    <div><strong>Space:</strong> O(V + E)</div>
+  </div>
+  <h3>Memory hook: Gray again = cycle</h3>
+  <p>WHITE = unvisited, GRAY = on current DFS path, BLACK = done. Seeing a GRAY neighbor is a back-edge (cycle). Kahn: if you cannot take all nodes, leftovers sit in a cycle.</p>
+  <h4>Java — DFS 3-color</h4>
+  <pre><code>import java.util.*;
+
+class Solution {
+    public boolean canFinish(int numCourses, int[][] prerequisites) {
+        List&lt;List&lt;Integer&gt;&gt; graph = new ArrayList&lt;&gt;();
+        for (int i = 0; i &lt; numCourses; i++) graph.add(new ArrayList&lt;&gt;());
+        for (int[] p : prerequisites) graph.get(p[1]).add(p[0]); // p[1] → p[0]
+
+        int[] color = new int[numCourses]; // 0 WHITE, 1 GRAY, 2 BLACK
+        for (int i = 0; i &lt; numCourses; i++) {
+            if (color[i] == 0 &amp;&amp; hasCycle(graph, color, i)) return false;
+        }
+        return true;
+    }
+
+    private boolean hasCycle(List&lt;List&lt;Integer&gt;&gt; g, int[] color, int node) {
+        color[node] = 1; // GRAY
+        for (int next : g.get(node)) {
+            if (color[next] == 1) return true; // back-edge
+            if (color[next] == 0 &amp;&amp; hasCycle(g, color, next)) return true;
+        }
+        color[node] = 2; // BLACK
+        return false;
+    }
+}</code></pre>
+  <h4>Java — Kahn&apos;s BFS</h4>
+  <pre><code>import java.util.*;
+
+class Solution {
+    public boolean canFinish(int numCourses, int[][] prerequisites) {
+        List&lt;List&lt;Integer&gt;&gt; graph = new ArrayList&lt;&gt;();
+        int[] indegree = new int[numCourses];
+        for (int i = 0; i &lt; numCourses; i++) graph.add(new ArrayList&lt;&gt;());
+        for (int[] p : prerequisites) {
+            graph.get(p[1]).add(p[0]);
+            indegree[p[0]]++;
+        }
+        Queue&lt;Integer&gt; q = new ArrayDeque&lt;&gt;();
+        for (int i = 0; i &lt; numCourses; i++)
+            if (indegree[i] == 0) q.offer(i);
+
+        int taken = 0;
+        while (!q.isEmpty()) {
+            int course = q.poll();
+            taken++;
+            for (int next : graph.get(course)) {
+                if (--indegree[next] == 0) q.offer(next);
+            }
+        }
+        return taken == numCourses; // false ⇒ cycle
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>GRAY = still on the recursion path; revisiting it means a cycle.</li>
+    <li>BLACK = fully explored; safe to skip.</li>
+    <li>Kahn peels indegree-0 nodes; a cycle never exposes a zero-indegree entry.</li>
+    <li>Same family: Course Schedule II, Alien Dictionary.</li>
+  </ul>
+</div>
+
+<!-- ========== FAANG PROBLEMS ========== -->
+<h2>FAANG Remixes — 16 Problems</h2>
+
+<!-- 1. Max Area of Island -->
+<div class="problem-block" id="p695">
+  <h3>1. Max Area of Island (LC 695)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Islands</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> Same flood-fill as Islands, but return the maximum component size instead of counting components. Prefer iterative to avoid stack overflow.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(R · C)</div>
+    <div><strong>Space:</strong> O(R · C) queue/stack</div>
+    
+  </div>
+<h4>Iterative BFS (recommended)</h4>
+  <pre><code>import java.util.ArrayDeque;
+import java.util.Queue;
+
+class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    public int maxAreaOfIsland(int[][] grid) {
+        int max = 0;
+        int rows = grid.length, cols = grid[0].length;
+        for (int r = 0; r &lt; rows; r++) {
+            for (int c = 0; c &lt; cols; c++) {
+                if (grid[r][c] == 1) {
+                    max = Math.max(max, flood(grid, r, c));
+                }
+            }
+        }
+        return max;
+    }
+
+    private int flood(int[][] grid, int sr, int sc) {
+        int rows = grid.length, cols = grid[0].length, area = 0;
+        Queue&lt;int[]&gt; q = new ArrayDeque&lt;&gt;();
+        q.offer(new int[]{sr, sc});
+        grid[sr][sc] = 0;
+        while (!q.isEmpty()) {
+            int[] cur = q.poll();
+            area++;
+            for (int[] d : DIRS) {
+                int nr = cur[0] + d[0], nc = cur[1] + d[1];
+                if (nr &lt; 0 || nc &lt; 0 || nr &gt;= rows || nc &gt;= cols
+                        || grid[nr][nc] == 0) continue;
+                grid[nr][nc] = 0;
+                q.offer(new int[]{nr, nc});
+            }
+        }
+        return area;
+    }
+}</code></pre>
+  <h4>Recursive DFS (small grids only)</h4>
+  <pre><code>class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    public int maxAreaOfIsland(int[][] grid) {
+        int max = 0;
+        for (int r = 0; r &lt; grid.length; r++) {
+            for (int c = 0; c &lt; grid[0].length; c++) {
+                if (grid[r][c] == 1) {
+                    max = Math.max(max, dfs(grid, r, c));
+                }
+            }
+        }
+        return max;
+    }
+
+    private int dfs(int[][] grid, int r, int c) {
+        if (r &lt; 0 || c &lt; 0 || r &gt;= grid.length || c &gt;= grid[0].length
+                || grid[r][c] == 0) return 0;
+        grid[r][c] = 0;
+        int area = 1;
+        for (int[] d : DIRS) area += dfs(grid, r + d[0], c + d[1]);
+        return area;
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Identical traversal to Number of Islands.</li>
+    <li>Flood returns area of one island; track global maximum.</li>
+    <li>Mark visited by setting cells to 0 when enqueueing.</li>
+    <li>Prefer Queue/Stack over recursion on large islands.</li>
+  </ul>
+</div>
+
+<!-- 2. Number of Provinces -->
+<div class="problem-block" id="p547">
+  <h3>2. Number of Provinces (LC 547)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Islands</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> Adjacency matrix graph; each unvisited node starts a new connected component (province). Prefer iterative BFS for large n.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(n²)</div>
+    <div><strong>Space:</strong> O(n)</div>
+    
+  </div>
+<h4>Iterative BFS (recommended)</h4>
+  <pre><code>import java.util.ArrayDeque;
+import java.util.Queue;
+
+class Solution {
+    public int findCircleNum(int[][] isConnected) {
+        int n = isConnected.length;
+        boolean[] visited = new boolean[n];
+        int provinces = 0;
+        for (int i = 0; i &lt; n; i++) {
+            if (visited[i]) continue;
+            provinces++;
+            Queue&lt;Integer&gt; q = new ArrayDeque&lt;&gt;();
+            q.offer(i);
+            visited[i] = true;
+            while (!q.isEmpty()) {
+                int node = q.poll();
+                for (int j = 0; j &lt; n; j++) {
+                    if (isConnected[node][j] == 1 &amp;&amp; !visited[j]) {
+                        visited[j] = true;
+                        q.offer(j);
+                    }
+                }
+            }
+        }
+        return provinces;
+    }
+}</code></pre>
+  <h4>Recursive DFS</h4>
+  <pre><code>class Solution {
+    public int findCircleNum(int[][] isConnected) {
+        int n = isConnected.length;
+        boolean[] visited = new boolean[n];
+        int provinces = 0;
+        for (int i = 0; i &lt; n; i++) {
+            if (!visited[i]) {
+                provinces++;
+                dfs(isConnected, visited, i);
+            }
+        }
+        return provinces;
+    }
+
+    private void dfs(int[][] graph, boolean[] visited, int node) {
+        visited[node] = true;
+        for (int j = 0; j &lt; graph.length; j++) {
+            if (graph[node][j] == 1 &amp;&amp; !visited[j]) {
+                dfs(graph, visited, j);
+            }
+        }
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Graph is implicit in the adjacency matrix.</li>
+    <li>Each unvisited city starts a new province flood.</li>
+    <li>Queue/Stack avoids deep recursion when n is large.</li>
+    <li>Union-Find is an alternative with nearly same complexity.</li>
+  </ul>
+</div>
+
+<!-- 3. Flood Fill -->
+<div class="problem-block" id="p733">
+  <h3>3. Flood Fill (LC 733)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Islands</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> Single-source flood from a starting pixel. Prefer iterative BFS on large images.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(R · C)</div>
+    <div><strong>Space:</strong> O(R · C) queue</div>
+    
+  </div>
+<h4>Iterative BFS (recommended)</h4>
+  <pre><code>import java.util.ArrayDeque;
+import java.util.Queue;
+
+class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    public int[][] floodFill(int[][] image, int sr, int sc, int color) {
+        int orig = image[sr][sc];
+        if (orig == color) return image;
+        int rows = image.length, cols = image[0].length;
+        Queue&lt;int[]&gt; q = new ArrayDeque&lt;&gt;();
+        q.offer(new int[]{sr, sc});
+        image[sr][sc] = color;
+        while (!q.isEmpty()) {
+            int[] cur = q.poll();
+            for (int[] d : DIRS) {
+                int nr = cur[0] + d[0], nc = cur[1] + d[1];
+                if (nr &lt; 0 || nc &lt; 0 || nr &gt;= rows || nc &gt;= cols
+                        || image[nr][nc] != orig) continue;
+                image[nr][nc] = color;
+                q.offer(new int[]{nr, nc});
+            }
+        }
+        return image;
+    }
+}</code></pre>
+  <h4>Recursive DFS</h4>
+  <pre><code>class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    public int[][] floodFill(int[][] image, int sr, int sc, int color) {
+        int orig = image[sr][sc];
+        if (orig == color) return image;
+        dfs(image, sr, sc, orig, color);
+        return image;
+    }
+
+    private void dfs(int[][] image, int r, int c, int orig, int color) {
+        if (r &lt; 0 || c &lt; 0 || r &gt;= image.length || c &gt;= image[0].length
+                || image[r][c] != orig) return;
+        image[r][c] = color;
+        for (int[] d : DIRS) dfs(image, r + d[0], c + d[1], orig, color);
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Only recolor cells matching the original color.</li>
+    <li>Paint when enqueueing so each cell is processed once.</li>
+    <li>Early return if new color equals original (no-op).</li>
+    <li>Queue avoids call-stack overflow on large connected regions.</li>
+  </ul>
+</div>
+
+<!-- 4. Surrounded Regions -->
+<div class="problem-block" id="p130">
+  <h3>4. Surrounded Regions (LC 130) — also Core #4</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Islands</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> Reverse thinking — DFS from border 'O's to mark safe regions; flip everything else.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(R · C)</div>
+    <div><strong>Space:</strong> O(R · C)</div>
+    
+  </div>
+<pre><code>class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    public void solve(char[][] board) {
+        if (board == null || board.length == 0) return;
+        int rows = board.length, cols = board[0].length;
+        for (int r = 0; r &lt; rows; r++) {
+            if (board[r][0] == 'O') dfs(board, r, 0);
+            if (board[r][cols - 1] == 'O') dfs(board, r, cols - 1);
+        }
+        for (int c = 0; c &lt; cols; c++) {
+            if (board[0][c] == 'O') dfs(board, 0, c);
+            if (board[rows - 1][c] == 'O') dfs(board, rows - 1, c);
+        }
+        for (int r = 0; r &lt; rows; r++) {
+            for (int c = 0; c &lt; cols; c++) {
+                if (board[r][c] == 'O') board[r][c] = 'X';
+                else if (board[r][c] == 'S') board[r][c] = 'O';
+            }
+        }
+    }
+
+    private void dfs(char[][] board, int r, int c) {
+        if (r &lt; 0 || c &lt; 0 || r &gt;= board.length || c &gt;= board[0].length
+                || board[r][c] != 'O') return;
+        board[r][c] = 'S'; // safe
+        for (int[] d : DIRS) dfs(board, r + d[0], c + d[1]);
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Regions touching the border can never be captured.</li>
+    <li>Mark border-connected 'O's as 'S' (safe) via DFS.</li>
+    <li>Remaining 'O's are surrounded → flip to 'X'.</li>
+    <li>Restore safe cells back to 'O'.</li>
+  </ul>
+</div>
+
+<!-- 5. Pacific Atlantic Water Flow -->
+<div class="problem-block" id="p417">
+  <h3>5. Pacific Atlantic Water Flow (LC 417)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Islands</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> Reverse DFS/BFS from ocean borders; cells reachable from both oceans are the answer.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(R · C)</div>
+    <div><strong>Space:</strong> O(R · C)</div>
+    
+  </div>
+<pre><code>class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    public List&lt;List&lt;Integer&gt;&gt; pacificAtlantic(int[][] heights) {
+        int rows = heights.length, cols = heights[0].length;
+        boolean[][] pacific = new boolean[rows][cols];
+        boolean[][] atlantic = new boolean[rows][cols];
+        for (int c = 0; c &lt; cols; c++) {
+            dfs(heights, pacific, 0, c);
+            dfs(heights, atlantic, rows - 1, c);
+        }
+        for (int r = 0; r &lt; rows; r++) {
+            dfs(heights, pacific, r, 0);
+            dfs(heights, atlantic, r, cols - 1);
+        }
+        List&lt;List&lt;Integer&gt;&gt; result = new ArrayList&lt;&gt;();
+        for (int r = 0; r &lt; rows; r++) {
+            for (int c = 0; c &lt; cols; c++) {
+                if (pacific[r][c] &amp;&amp; atlantic[r][c]) {
+                    result.add(Arrays.asList(r, c));
+                }
+            }
+        }
+        return result;
+    }
+
+    private void dfs(int[][] heights, boolean[][] reachable, int r, int c) {
+        if (reachable[r][c]) return;
+        reachable[r][c] = true;
+        for (int[] d : DIRS) {
+            int nr = r + d[0], nc = c + d[1];
+            if (nr &gt;= 0 &amp;&amp; nc &gt;= 0 &amp;&amp; nr &lt; heights.length &amp;&amp; nc &lt; heights[0].length
+                    &amp;&amp; heights[nr][nc] &gt;= heights[r][c]) {
+                dfs(heights, reachable, nr, nc);
+            }
+        }
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Water flows uphill in reverse: from ocean inward to higher/equal cells.</li>
+    <li>Run DFS from Pacific borders and Atlantic borders separately.</li>
+    <li>Intersection of both reachable sets is the answer.</li>
+    <li>Avoids TLE from checking every cell forward to both oceans.</li>
+  </ul>
+</div>
+
+<!-- 6. 01 Matrix -->
+<div class="problem-block" id="p542">
+  <h3>6. 01 Matrix (LC 542)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Oranges</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> Multi-source BFS from all 0-cells simultaneously to compute distance to nearest zero.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(R · C)</div>
+    <div><strong>Space:</strong> O(R · C) queue</div>
+    
+  </div>
+<pre><code>class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    public int[][] updateMatrix(int[][] mat) {
+        int rows = mat.length, cols = mat[0].length;
+        int[][] dist = new int[rows][cols];
+        ArrayDeque&lt;int[]&gt; q = new ArrayDeque&lt;&gt;();
+        for (int r = 0; r &lt; rows; r++) {
+            Arrays.fill(dist[r], Integer.MAX_VALUE);
+            for (int c = 0; c &lt; cols; c++) {
+                if (mat[r][c] == 0) {
+                    dist[r][c] = 0;
+                    q.offer(new int[]{r, c});
+                }
+            }
+        }
+        while (!q.isEmpty()) {
+            int[] cell = q.poll();
+            for (int[] d : DIRS) {
+                int nr = cell[0] + d[0], nc = cell[1] + d[1];
+                if (nr &gt;= 0 &amp;&amp; nc &gt;= 0 &amp;&amp; nr &lt; rows &amp;&amp; nc &lt; cols
+                        &amp;&amp; dist[nr][nc] &gt; dist[cell[0]][cell[1]] + 1) {
+                    dist[nr][nc] = dist[cell[0]][cell[1]] + 1;
+                    q.offer(new int[]{nr, nc});
+                }
+            }
+        }
+        return dist;
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Seed BFS with every zero cell at distance 0.</li>
+    <li>Identical multi-source pattern to Rotting Oranges.</li>
+    <li>Relax distances as BFS expands outward.</li>
+    <li>Time O(m·n), each cell enqueued at most once per improvement.</li>
+  </ul>
+</div>
+
+<!-- 7. Walls and Gates -->
+<div class="problem-block" id="p286">
+  <h3>7. Walls and Gates (LC 286)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Oranges</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> Multi-source BFS from all gates (-1) to fill empty rooms (INF) with distance to nearest gate.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(R · C)</div>
+    <div><strong>Space:</strong> O(R · C) queue</div>
+    
+  </div>
+<pre><code>class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+    private static final int INF = Integer.MAX_VALUE;
+    private static final int GATE = 0;
+    private static final int WALL = -1;
+
+    public void wallsAndGates(int[][] rooms) {
+        int rows = rooms.length, cols = rooms[0].length;
+        ArrayDeque&lt;int[]&gt; q = new ArrayDeque&lt;&gt;();
+        for (int r = 0; r &lt; rows; r++) {
+            for (int c = 0; c &lt; cols; c++) {
+                if (rooms[r][c] == GATE) q.offer(new int[]{r, c});
+            }
+        }
+        while (!q.isEmpty()) {
+            int[] cell = q.poll();
+            for (int[] d : DIRS) {
+                int nr = cell[0] + d[0], nc = cell[1] + d[1];
+                if (nr &lt; 0 || nc &lt; 0 || nr &gt;= rows || nc &gt;= cols) continue;
+                if (rooms[nr][nc] != INF) continue;
+                rooms[nr][nc] = rooms[cell[0]][cell[1]] + 1;
+                q.offer(new int[]{nr, nc});
+            }
+        }
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Gates are BFS sources at distance 0.</li>
+    <li>Skip walls (-1) and already-filled rooms.</li>
+    <li>Mutate grid in-place with distances.</li>
+    <li>Same orange-spread template with multiple starting points.</li>
+  </ul>
+</div>
+
+<!-- 8. Shortest Bridge -->
+<div class="problem-block" id="p934">
+  <h3>8. Shortest Bridge (LC 934)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Islands + Oranges</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> DFS to find first island, then multi-source BFS from its border to reach the second island.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(R · C)</div>
+    <div><strong>Space:</strong> O(R · C)</div>
+    
+  </div>
+<pre><code>class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    public int shortestBridge(int[][] grid) {
+        int rows = grid.length, cols = grid[0].length;
+        ArrayDeque&lt;int[]&gt; q = new ArrayDeque&lt;&gt;();
+        boolean found = false;
+        for (int r = 0; r &lt; rows &amp;&amp; !found; r++) {
+            for (int c = 0; c &lt; cols &amp;&amp; !found; c++) {
+                if (grid[r][c] == 1) {
+                    dfs(grid, r, c, q);
+                    found = true;
+                }
+            }
+        }
+        int steps = 0;
+        while (!q.isEmpty()) {
+            int size = q.size();
+            for (int i = 0; i &lt; size; i++) {
+                int[] cell = q.poll();
+                for (int[] d : DIRS) {
+                    int nr = cell[0] + d[0], nc = cell[1] + d[1];
+                    if (nr &lt; 0 || nc &lt; 0 || nr &gt;= rows || nc &gt;= cols) continue;
+                    if (grid[nr][nc] == 1) return steps;
+                    if (grid[nr][nc] == 0) {
+                        grid[nr][nc] = 2;
+                        q.offer(new int[]{nr, nc});
+                    }
+                }
+            }
+            steps++;
+        }
+        return -1;
+    }
+
+    private void dfs(int[][] grid, int r, int c, ArrayDeque&lt;int[]&gt; q) {
+        if (r &lt; 0 || c &lt; 0 || r &gt;= grid.length || c &gt;= grid[0].length
+                || grid[r][c] != 1) return;
+        grid[r][c] = 2;
+        q.offer(new int[]{r, c});
+        for (int[] d : DIRS) dfs(grid, r + d[0], c + d[1], q);
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Phase 1: DFS marks entire first island as 2 and seeds the queue.</li>
+    <li>Phase 2: BFS expands from island border into water (0-cells).</li>
+    <li>First time you hit a 1-cell (second island), return step count.</li>
+    <li>Combines island flood-fill with multi-source BFS.</li>
+  </ul>
+</div>
+
+<!-- 9. Shortest Path in Binary Matrix -->
+<div class="problem-block" id="p1091">
+  <h3>9. Shortest Path in Binary Matrix (LC 1091)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Ladder</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> BFS shortest path on a grid with 8-directional moves; classic unweighted graph search.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(R · C)</div>
+    <div><strong>Space:</strong> O(R · C) queue</div>
+    
+  </div>
+<pre><code>class Solution {
+    private static final int[][] DIRS = {
+        {-1,-1},{-1,0},{-1,1},{0,-1},{0,1},{1,-1},{1,0},{1,1}
+    };
+
+    public int shortestPathBinaryMatrix(int[][] grid) {
+        int n = grid.length;
+        if (grid[0][0] == 1 || grid[n - 1][n - 1] == 1) return -1;
+        if (n == 1) return 1;
+        ArrayDeque&lt;int[]&gt; q = new ArrayDeque&lt;&gt;();
+        q.offer(new int[]{0, 0});
+        grid[0][0] = 1; // visited
+        int steps = 1;
+        while (!q.isEmpty()) {
+            int size = q.size();
+            for (int i = 0; i &lt; size; i++) {
+                int[] cell = q.poll();
+                for (int[] d : DIRS) {
+                    int nr = cell[0] + d[0], nc = cell[1] + d[1];
+                    if (nr &lt; 0 || nc &lt; 0 || nr &gt;= n || nc &gt;= n || grid[nr][nc] == 1) continue;
+                    if (nr == n - 1 &amp;&amp; nc == n - 1) return steps + 1;
+                    grid[nr][nc] = 1;
+                    q.offer(new int[]{nr, nc});
+                }
+            }
+            steps++;
+        }
+        return -1;
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>BFS guarantees shortest path in unweighted grid.</li>
+    <li>8 directions including diagonals.</li>
+    <li>Mark visited by flipping 0 → 1.</li>
+    <li>Level-by-level counting gives path length.</li>
+  </ul>
+</div>
+
+<!-- 10. Word Search -->
+<div class="problem-block" id="p79">
+  <h3>10. Word Search (LC 79)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Islands</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> DFS backtracking on a grid to find a path spelling the target word.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(R · C · 3^L)</div>
+    <div><strong>Space:</strong> O(L) recursion</div>
+    <div style="flex-basis:100%;opacity:0.75;font-size:0.85rem">L = word length; up to 3 branches after first step.</div>
+  </div>
+<pre><code>class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    public boolean exist(char[][] board, String word) {
+        int rows = board.length, cols = board[0].length;
+        for (int r = 0; r &lt; rows; r++) {
+            for (int c = 0; c &lt; cols; c++) {
+                if (dfs(board, word, r, c, 0)) return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean dfs(char[][] board, String word, int r, int c, int idx) {
+        if (idx == word.length()) return true;
+        if (r &lt; 0 || c &lt; 0 || r &gt;= board.length || c &gt;= board[0].length) return false;
+        if (board[r][c] != word.charAt(idx)) return false;
+        char temp = board[r][c];
+        board[r][c] = '#';
+        for (int[] d : DIRS) {
+            if (dfs(board, word, r + d[0], c + d[1], idx + 1)) return true;
+        }
+        board[r][c] = temp;
+        return false;
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Try DFS from every cell as a potential start.</li>
+    <li>Mark visited with '#' to prevent reuse in same path.</li>
+    <li>Backtrack by restoring character after exploring.</li>
+    <li>Prune when character mismatch or out of bounds.</li>
+  </ul>
+</div>
+
+<!-- 11. Open the Lock -->
+<div class="problem-block" id="p752">
+  <h3>11. Open the Lock (LC 752)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Ladder</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> BFS on implicit state graph where each dial turn is an edge; shortest path to target.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(10⁴ · 8)</div>
+    <div><strong>Space:</strong> O(10⁴) visited</div>
+    <div style="flex-basis:100%;opacity:0.75;font-size:0.85rem">4-digit lock; constant-size state space.</div>
+  </div>
+<pre><code>class Solution {
+    public int openLock(String[] deadends, String target) {
+        Set&lt;String&gt; dead = new HashSet&lt;&gt;(Arrays.asList(deadends));
+        String start = "0000";
+        if (dead.contains(start)) return -1;
+        if (start.equals(target)) return 0;
+        ArrayDeque&lt;String&gt; q = new ArrayDeque&lt;&gt;();
+        Set&lt;String&gt; visited = new HashSet&lt;&gt;();
+        q.offer(start);
+        visited.add(start);
+        int moves = 0;
+        while (!q.isEmpty()) {
+            int size = q.size();
+            for (int i = 0; i &lt; size; i++) {
+                String cur = q.poll();
+                for (int pos = 0; pos &lt; 4; pos++) {
+                    for (int delta : new int[]{-1, 1}) {
+                        char[] chars = cur.toCharArray();
+                        chars[pos] = (char) ((chars[pos] - '0' + delta + 10) % 10 + '0');
+                        String next = new String(chars);
+                        if (next.equals(target)) return moves + 1;
+                        if (dead.contains(next) || visited.contains(next)) continue;
+                        visited.add(next);
+                        q.offer(next);
+                    }
+                }
+            }
+            moves++;
+        }
+        return -1;
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Each lock combination is a node; 8 neighbors (4 wheels × 2 directions).</li>
+    <li>BFS finds minimum moves to target.</li>
+    <li>Deadends are blocked nodes — skip them.</li>
+    <li>Modulo arithmetic handles wrap-around (9→0, 0→9).</li>
+  </ul>
+</div>
+
+<!-- 12. Minimum Knight Moves -->
+<div class="problem-block" id="p1197">
+  <h3>12. Minimum Knight Moves (LC 1197)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Ladder</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> BFS on an infinite chessboard; each knight jump is one unweighted edge.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(max(|x|,|y|)²)</div>
+    <div><strong>Space:</strong> O(max(|x|,|y|)²)</div>
+    <div style="flex-basis:100%;opacity:0.75;font-size:0.85rem">With pruning / symmetry.</div>
+  </div>
+<pre><code>class Solution {
+    private static final int[][] MOVES = {
+        {2,1},{2,-1},{-2,1},{-2,-1},{1,2},{1,-2},{-1,2},{-1,-2}
+    };
+
+    public int minKnightMoves(int x, int y) {
+        x = Math.abs(x);
+        y = Math.abs(y);
+        ArrayDeque&lt;int[]&gt; q = new ArrayDeque&lt;&gt;();
+        Set&lt;String&gt; visited = new HashSet&lt;&gt;();
+        q.offer(new int[]{0, 0});
+        visited.add("0,0");
+        int steps = 0;
+        while (!q.isEmpty()) {
+            int size = q.size();
+            for (int i = 0; i &lt; size; i++) {
+                int[] cell = q.poll();
+                if (cell[0] == x &amp;&amp; cell[1] == y) return steps;
+                for (int[] m : MOVES) {
+                    int nr = cell[0] + m[0], nc = cell[1] + m[1];
+                    if (nr &lt; -1 || nc &lt; -1) continue;
+                    String key = nr + "," + nc;
+                    if (visited.contains(key)) continue;
+                    visited.add(key);
+                    q.offer(new int[]{nr, nc});
+                }
+            }
+            steps++;
+        }
+        return -1;
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Symmetry: work in first quadrant via absolute values.</li>
+    <li>BFS from (0,0) outward guarantees minimum moves.</li>
+    <li>8 fixed knight move offsets.</li>
+    <li>Allow nr/nc ≥ -1 to handle negative quadrants correctly.</li>
+  </ul>
+</div>
+
+<!-- 13. Keys and Rooms -->
+<div class="problem-block" id="p841">
+  <h3>13. Keys and Rooms (LC 841)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Islands</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> DFS/BFS graph traversal from room 0; visit all reachable nodes.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(N + E)</div>
+    <div><strong>Space:</strong> O(N)</div>
+    
+  </div>
+<pre><code>class Solution {
+    public boolean canVisitAllRooms(List&lt;List&lt;Integer&gt;&gt; rooms) {
+        boolean[] visited = new boolean[rooms.size()];
+        dfs(rooms, visited, 0);
+        for (boolean v : visited) {
+            if (!v) return false;
+        }
+        return true;
+    }
+
+    private void dfs(List&lt;List&lt;Integer&gt;&gt; rooms, boolean[] visited, int room) {
+        visited[room] = true;
+        for (int key : rooms.get(room)) {
+            if (!visited[key]) dfs(rooms, visited, key);
+        }
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Rooms form a directed graph; keys are edges.</li>
+    <li>DFS from room 0 collects all reachable rooms.</li>
+    <li>Return true iff every room was visited.</li>
+    <li>BFS with a queue is equally valid.</li>
+  </ul>
+</div>
+
+<!-- 14. Course Schedule -->
+<div class="problem-block" id="p207">
+  <h3>14. Course Schedule (LC 207) — also Core #5</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Islands (graph traversal)</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> Cycle detection in a directed graph via DFS or Kahn's BFS topological sort.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(V + E)</div>
+    <div><strong>Space:</strong> O(V + E)</div>
+    
+  </div>
+<pre><code>class Solution {
+    public boolean canFinish(int numCourses, int[][] prerequisites) {
+        List&lt;List&lt;Integer&gt;&gt; graph = new ArrayList&lt;&gt;();
+        int[] indegree = new int[numCourses];
+        for (int i = 0; i &lt; numCourses; i++) graph.add(new ArrayList&lt;&gt;());
+        for (int[] pre : prerequisites) {
+            graph.get(pre[1]).add(pre[0]);
+            indegree[pre[0]]++;
+        }
+        ArrayDeque&lt;Integer&gt; q = new ArrayDeque&lt;&gt;();
+        for (int i = 0; i &lt; numCourses; i++) {
+            if (indegree[i] == 0) q.offer(i);
+        }
+        int taken = 0;
+        while (!q.isEmpty()) {
+            int course = q.poll();
+            taken++;
+            for (int next : graph.get(course)) {
+                if (--indegree[next] == 0) q.offer(next);
+            }
+        }
+        return taken == numCourses;
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Build adjacency list and indegree array from prerequisites.</li>
+    <li>Kahn's algorithm: BFS courses with indegree 0.</li>
+    <li>Decrement indegree when a prerequisite is satisfied.</li>
+    <li>Cycle exists iff taken &lt; numCourses (not all courses reachable).</li>
+  </ul>
+</div>
+
+<!-- 15. Clone Graph -->
+<div class="problem-block" id="p133">
+  <h3>15. Clone Graph (LC 133)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Islands (graph traversal)</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> BFS/DFS traversal with a HashMap to clone each node and its neighbors.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(N + E)</div>
+    <div><strong>Space:</strong> O(N)</div>
+    
+  </div>
+<pre><code>/*
+// Definition for a Node.
+class Node {
+    public int val;
+    public List&lt;Node&gt; neighbors;
+    public Node() { val = 0; neighbors = new ArrayList&lt;Node&gt;(); }
+    public Node(int _val) { val = _val; neighbors = new ArrayList&lt;Node&gt;(); }
+    public Node(int _val, ArrayList&lt;Node&gt; _neighbors) {
+        val = _val; neighbors = _neighbors;
+    }
+}
+*/
+
+class Solution {
+    public Node cloneGraph(Node node) {
+        if (node == null) return null;
+        Map&lt;Node, Node&gt; map = new HashMap&lt;&gt;();
+        ArrayDeque&lt;Node&gt; q = new ArrayDeque&lt;&gt;();
+        q.offer(node);
+        map.put(node, new Node(node.val));
+        while (!q.isEmpty()) {
+            Node cur = q.poll();
+            for (Node neighbor : cur.neighbors) {
+                if (!map.containsKey(neighbor)) {
+                    map.put(neighbor, new Node(neighbor.val));
+                    q.offer(neighbor);
+                }
+                map.get(cur).neighbors.add(map.get(neighbor));
+            }
+        }
+        return map.get(node);
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>BFS visits all nodes reachable from the start.</li>
+    <li>HashMap maps original node → cloned node.</li>
+    <li>Create clone on first discovery; wire neighbors via map lookup.</li>
+    <li>DFS with same map pattern is equally common in interviews.</li>
+  </ul>
+</div>
+
+<!-- 16. Swim in Rising Water -->
+<div class="problem-block" id="p778">
+  <h3>16. Swim in Rising Water (LC 778)</h3>
+  <div class="meta">
+    <span><strong>Pattern Twin:</strong> Ladder + Oranges</span>
+    <span><strong>Companies:</strong> Amazon, Google, Microsoft</span>
+  </div>
+  <p><strong>Why it maps:</strong> Binary search on answer time T, then BFS to check if path exists using only cells with height ≤ T.</p>
+    <div class="complexity">
+    <div><strong>Time:</strong> O(n² log n)</div>
+    <div><strong>Space:</strong> O(n²)</div>
+    <div style="flex-basis:100%;opacity:0.75;font-size:0.85rem">Binary search on height × BFS per check.</div>
+  </div>
+<pre><code>class Solution {
+    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    public int swimInWater(int[][] grid) {
+        int n = grid.length;
+        int lo = Math.max(grid[0][0], grid[n - 1][n - 1]);
+        int hi = n * n - 1;
+        while (lo &lt; hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (canSwim(grid, mid)) hi = mid;
+            else lo = mid + 1;
+        }
+        return lo;
+    }
+
+    private boolean canSwim(int[][] grid, int t) {
+        int n = grid.length;
+        if (grid[0][0] &gt; t || grid[n - 1][n - 1] &gt; t) return false;
+        boolean[][] visited = new boolean[n][n];
+        ArrayDeque&lt;int[]&gt; q = new ArrayDeque&lt;&gt;();
+        q.offer(new int[]{0, 0});
+        visited[0][0] = true;
+        while (!q.isEmpty()) {
+            int[] cell = q.poll();
+            if (cell[0] == n - 1 &amp;&amp; cell[1] == n - 1) return true;
+            for (int[] d : DIRS) {
+                int nr = cell[0] + d[0], nc = cell[1] + d[1];
+                if (nr &gt;= 0 &amp;&amp; nc &gt;= 0 &amp;&amp; nr &lt; n &amp;&amp; nc &lt; n
+                        &amp;&amp; !visited[nr][nc] &amp;&amp; grid[nr][nc] &lt;= t) {
+                    visited[nr][nc] = true;
+                    q.offer(new int[]{nr, nc});
+                }
+            }
+        }
+        return false;
+    }
+}</code></pre>
+  <ul class="explain">
+    <li>Answer is the minimum time T when a path from top-left to bottom-right exists.</li>
+    <li>Binary search T in [max(start,end), n²-1].</li>
+    <li>For each T, BFS checks reachability using cells with height ≤ T.</li>
+    <li>Dijkstra is an alternative but binary search + BFS is simpler to explain.</li>
+    <li>Time O(n² log n²) with BFS O(n²) per check.</li>
+  </ul>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "holdings": [
+    {
+      "asset_type": "stock",
+      "symbol": "RELIANCE.NSE",
+      "name": "Reliance Industries",
+      "quantity": 10,
+      "avg_cost": 1200,
+      "current_price": 1290
+    },
+    {
+      "asset_type": "stock",
+      "symbol": "TCS.NSE",
+      "name": "Tata Consultancy Services",
+      "quantity": 5,
+      "avg_cost": 3500,
+      "current_price": 4100
+    },
+    {
+      "asset_type": "mutual_fund",
+      "name": "Parag Parikh Flexi Cap",
+      "quantity": 100,
+      "avg_cost": 65,
+      "current_price": 78
+    }
+  ]
+}

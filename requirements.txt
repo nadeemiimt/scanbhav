@@ -1,0 +1,19 @@
+pandas>=2.0
+chromadb>=0.5,<2
+ollama>=0.4
+pypdf>=5
+fastapi>=0.115
+uvicorn[standard]>=0.30
+requests>=2.31
+python-dotenv>=1.0
+yfinance>=0.2.54
+python-multipart>=0.0.9
+PyJWT>=2.8
+# Broker live data + orders (install the SDK for your active broker; all three can coexist)
+kiteconnect>=5.0
+growwapi>=1.5
+fyers-apiv3>=3.1.14
+# Note: growwapi and fyers-apiv3 pin different aiohttp versions — if pip warns, you only
+# need the SDK matching BROKER_DEFAULT (groww | zerodha | fyers) at runtime.
+# Optional: Cursor Agent SDK for Composer 2.5 / Grok 4.5 GenAI research
+cursor-sdk>=0.1.0

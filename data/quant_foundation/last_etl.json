@@ -1,0 +1,19 @@
+{
+  "started_at": "2026-09-09T03:39:32.672750+00:00",
+  "sources": {
+    "nse": {
+      "ok": true,
+      "message": "Seed foundation files ensured. Load delivery/FII/OI via CSV/JSON drops or broker API.",
+      "updated_at": "2026-09-09T03:39:32.673377+00:00",
+      "force": false
+    }
+  },
+  "files": {
+    "delivery": true,
+    "fii_dii": true,
+    "bulk_deals": true,
+    "earnings": true,
+    "fo_oi": true
+  },
+  "finished_at": "2026-09-09T03:39:32.673403+00:00"
+}

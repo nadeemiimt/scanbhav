@@ -1,0 +1,11 @@
+{
+  "island-step": 1,
+  "problem": "cycle",
+  "orange-step": 4,
+  "ladder-step": 4,
+  "mode": "problem",
+  "faang-pattern": "all",
+  "faang-selected": "Course Schedule",
+  "company": "amazon",
+  "surrounded-step": 3
+}

@@ -1,0 +1,28 @@
+{
+  "ticker": "EXAMPLE",
+  "company_name": "Example Corporation",
+  "sector": "Technology",
+  "price": 125.4,
+  "market_cap": 42000000000,
+  "financials": {
+    "revenue_growth_yoy_pct": 18.2,
+    "eps_growth_yoy_pct": 12.7,
+    "gross_margin_pct": 61.4,
+    "operating_margin_pct": 19.8,
+    "free_cash_flow": 3200000000,
+    "debt_to_equity": 0.42,
+    "roe_pct": 21.1
+  },
+  "valuation": {
+    "pe_ratio": 28.4,
+    "forward_pe_ratio": 22.1,
+    "price_to_sales": 5.8
+  },
+  "price_performance": {
+    "one_month_pct": -6.4,
+    "six_month_pct": 14.2,
+    "one_year_pct": 24.7,
+    "distance_from_52_week_high_pct": -11.3
+  },
+  "notes": ["Revenue accelerated in the latest quarter."]
+}

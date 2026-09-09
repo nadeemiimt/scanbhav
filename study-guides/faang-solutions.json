@@ -1,0 +1,227 @@
+[
+  {
+    "id": "p695",
+    "name": "Max Area of Island",
+    "title": "1. Max Area of Island (LC 695)",
+    "twin": "Islands",
+    "why": "Same flood-fill as Islands, but return the maximum component size instead of counting components.",
+    "code": "class Solution {\n    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};\n\n    public int maxAreaOfIsland(int[][] grid) {\n        int max = 0;\n        for (int r = 0; r < grid.length; r++) {\n            for (int c = 0; c < grid[0].length; c++) {\n                if (grid[r][c] == 1) {\n                    max = Math.max(max, dfs(grid, r, c));\n                }\n            }\n        }\n        return max;\n    }\n\n    private int dfs(int[][] grid, int r, int c) {\n        if (r < 0 || c < 0 || r >= grid.length || c >= grid[0].length\n                || grid[r][c] == 0) return 0;\n        grid[r][c] = 0;\n        int area = 1;\n        for (int[] d : DIRS) area += dfs(grid, r + d[0], c + d[1]);\n        return area;\n    }\n}",
+    "bullets": [
+      "Identical traversal to Number of Islands.",
+      "DFS returns area of current cell plus all connected land.",
+      "Track global maximum across all components.",
+      "Mark visited by setting cells to 0."
+    ]
+  },
+  {
+    "id": "p547",
+    "name": "Number of Provinces",
+    "title": "2. Number of Provinces (LC 547)",
+    "twin": "Islands",
+    "why": "Adjacency matrix graph; each unvisited node starts a new connected component (province).",
+    "code": "class Solution {\n    public int findCircleNum(int[][] isConnected) {\n        int n = isConnected.length;\n        boolean[] visited = new boolean[n];\n        int provinces = 0;\n        for (int i = 0; i < n; i++) {\n            if (!visited[i]) {\n                provinces++;\n                dfs(isConnected, visited, i);\n            }\n        }\n        return provinces;\n    }\n\n    private void dfs(int[][] graph, boolean[] visited, int node) {\n        visited[node] = true;\n        for (int j = 0; j < graph.length; j++) {\n            if (graph[node][j] == 1 && !visited[j]) {\n                dfs(graph, visited, j);\n            }\n        }\n    }\n}",
+    "bullets": [
+      "Graph is implicit in the adjacency matrix.",
+      "DFS from each unvisited city floods the entire province.",
+      "Count how many times you need to start a new DFS.",
+      "Union-Find is an alternative with nearly same complexity."
+    ]
+  },
+  {
+    "id": "p733",
+    "name": "Flood Fill",
+    "title": "3. Flood Fill (LC 733)",
+    "twin": "Islands",
+    "why": "Single-source DFS/BFS flood from a starting pixel, recoloring connected same-color cells.",
+    "code": "class Solution {\n    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};\n\n    public int[][] floodFill(int[][] image, int sr, int sc, int color) {\n        int orig = image[sr][sc];\n        if (orig == color) return image;\n        dfs(image, sr, sc, orig, color);\n        return image;\n    }\n\n    private void dfs(int[][] image, int r, int c, int orig, int color) {\n        if (r < 0 || c < 0 || r >= image.length || c >= image[0].length\n                || image[r][c] != orig) return;\n        image[r][c] = color;\n        for (int[] d : DIRS) dfs(image, r + d[0], c + d[1], orig, color);\n    }\n}",
+    "bullets": [
+      "Classic paint-bucket: only flood cells matching original color.",
+      "Early return if new color equals original (no-op).",
+      "Same 4-directional DFS as island problems.",
+      "BFS with a queue works identically."
+    ]
+  },
+  {
+    "id": "p130",
+    "name": "Surrounded Regions",
+    "title": "4. Surrounded Regions (LC 130)",
+    "twin": "Islands",
+    "why": "Reverse thinking \u2014 DFS from border 'O's to mark safe regions; flip everything else.",
+    "code": "class Solution {\n    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};\n\n    public void solve(char[][] board) {\n        if (board == null || board.length == 0) return;\n        int rows = board.length, cols = board[0].length;\n        for (int r = 0; r < rows; r++) {\n            if (board[r][0] == 'O') dfs(board, r, 0);\n            if (board[r][cols - 1] == 'O') dfs(board, r, cols - 1);\n        }\n        for (int c = 0; c < cols; c++) {\n            if (board[0][c] == 'O') dfs(board, 0, c);\n            if (board[rows - 1][c] == 'O') dfs(board, rows - 1, c);\n        }\n        for (int r = 0; r < rows; r++) {\n            for (int c = 0; c < cols; c++) {\n                if (board[r][c] == 'O') board[r][c] = 'X';\n                else if (board[r][c] == 'S') board[r][c] = 'O';\n            }\n        }\n    }\n\n    private void dfs(char[][] board, int r, int c) {\n        if (r < 0 || c < 0 || r >= board.length || c >= board[0].length\n                || board[r][c] != 'O') return;\n        board[r][c] = 'S'; // safe\n        for (int[] d : DIRS) dfs(board, r + d[0], c + d[1]);\n    }\n}",
+    "bullets": [
+      "Regions touching the border can never be captured.",
+      "Mark border-connected 'O's as 'S' (safe) via DFS.",
+      "Remaining 'O's are surrounded \u2192 flip to 'X'.",
+      "Restore safe cells back to 'O'."
+    ]
+  },
+  {
+    "id": "p417",
+    "name": "Pacific Atlantic Water Flow",
+    "title": "5. Pacific Atlantic Water Flow (LC 417)",
+    "twin": "Islands",
+    "why": "Reverse DFS/BFS from ocean borders; cells reachable from both oceans are the answer.",
+    "code": "class Solution {\n    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};\n\n    public List<List<Integer>> pacificAtlantic(int[][] heights) {\n        int rows = heights.length, cols = heights[0].length;\n        boolean[][] pacific = new boolean[rows][cols];\n        boolean[][] atlantic = new boolean[rows][cols];\n        for (int c = 0; c < cols; c++) {\n            dfs(heights, pacific, 0, c);\n            dfs(heights, atlantic, rows - 1, c);\n        }\n        for (int r = 0; r < rows; r++) {\n            dfs(heights, pacific, r, 0);\n            dfs(heights, atlantic, r, cols - 1);\n        }\n        List<List<Integer>> result = new ArrayList<>();\n        for (int r = 0; r < rows; r++) {\n            for (int c = 0; c < cols; c++) {\n                if (pacific[r][c] && atlantic[r][c]) {\n                    result.add(Arrays.asList(r, c));\n                }\n            }\n        }\n        return result;\n    }\n\n    private void dfs(int[][] heights, boolean[][] reachable, int r, int c) {\n        if (reachable[r][c]) return;\n        reachable[r][c] = true;\n        for (int[] d : DIRS) {\n            int nr = r + d[0], nc = c + d[1];\n            if (nr >= 0 && nc >= 0 && nr < heights.length && nc < heights[0].length\n                    && heights[nr][nc] >= heights[r][c]) {\n                dfs(heights, reachable, nr, nc);\n            }\n        }\n    }\n}",
+    "bullets": [
+      "Water flows uphill in reverse: from ocean inward to higher/equal cells.",
+      "Run DFS from Pacific borders and Atlantic borders separately.",
+      "Intersection of both reachable sets is the answer.",
+      "Avoids TLE from checking every cell forward to both oceans."
+    ]
+  },
+  {
+    "id": "p542",
+    "name": "01 Matrix",
+    "title": "6. 01 Matrix (LC 542)",
+    "twin": "Oranges",
+    "why": "Multi-source BFS from all 0-cells simultaneously to compute distance to nearest zero.",
+    "code": "class Solution {\n    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};\n\n    public int[][] updateMatrix(int[][] mat) {\n        int rows = mat.length, cols = mat[0].length;\n        int[][] dist = new int[rows][cols];\n        ArrayDeque<int[]> q = new ArrayDeque<>();\n        for (int r = 0; r < rows; r++) {\n            Arrays.fill(dist[r], Integer.MAX_VALUE);\n            for (int c = 0; c < cols; c++) {\n                if (mat[r][c] == 0) {\n                    dist[r][c] = 0;\n                    q.offer(new int[]{r, c});\n                }\n            }\n        }\n        while (!q.isEmpty()) {\n            int[] cell = q.poll();\n            for (int[] d : DIRS) {\n                int nr = cell[0] + d[0], nc = cell[1] + d[1];\n                if (nr >= 0 && nc >= 0 && nr < rows && nc < cols\n                        && dist[nr][nc] > dist[cell[0]][cell[1]] + 1) {\n                    dist[nr][nc] = dist[cell[0]][cell[1]] + 1;\n                    q.offer(new int[]{nr, nc});\n                }\n            }\n        }\n        return dist;\n    }\n}",
+    "bullets": [
+      "Seed BFS with every zero cell at distance 0.",
+      "Identical multi-source pattern to Rotting Oranges.",
+      "Relax distances as BFS expands outward.",
+      "Time O(m\u00b7n), each cell enqueued at most once per improvement."
+    ]
+  },
+  {
+    "id": "p286",
+    "name": "Walls and Gates",
+    "title": "7. Walls and Gates (LC 286)",
+    "twin": "Oranges",
+    "why": "Multi-source BFS from all gates (-1) to fill empty rooms (INF) with distance to nearest gate.",
+    "code": "class Solution {\n    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};\n    private static final int INF = Integer.MAX_VALUE;\n    private static final int GATE = 0;\n    private static final int WALL = -1;\n\n    public void wallsAndGates(int[][] rooms) {\n        int rows = rooms.length, cols = rooms[0].length;\n        ArrayDeque<int[]> q = new ArrayDeque<>();\n        for (int r = 0; r < rows; r++) {\n            for (int c = 0; c < cols; c++) {\n                if (rooms[r][c] == GATE) q.offer(new int[]{r, c});\n            }\n        }\n        while (!q.isEmpty()) {\n            int[] cell = q.poll();\n            for (int[] d : DIRS) {\n                int nr = cell[0] + d[0], nc = cell[1] + d[1];\n                if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) continue;\n                if (rooms[nr][nc] != INF) continue;\n                rooms[nr][nc] = rooms[cell[0]][cell[1]] + 1;\n                q.offer(new int[]{nr, nc});\n            }\n        }\n    }\n}",
+    "bullets": [
+      "Gates are BFS sources at distance 0.",
+      "Skip walls (-1) and already-filled rooms.",
+      "Mutate grid in-place with distances.",
+      "Same orange-spread template with multiple starting points."
+    ]
+  },
+  {
+    "id": "p934",
+    "name": "Shortest Bridge",
+    "title": "8. Shortest Bridge (LC 934)",
+    "twin": "Islands + Oranges",
+    "why": "DFS to find first island, then multi-source BFS from its border to reach the second island.",
+    "code": "class Solution {\n    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};\n\n    public int shortestBridge(int[][] grid) {\n        int rows = grid.length, cols = grid[0].length;\n        ArrayDeque<int[]> q = new ArrayDeque<>();\n        boolean found = false;\n        for (int r = 0; r < rows && !found; r++) {\n            for (int c = 0; c < cols && !found; c++) {\n                if (grid[r][c] == 1) {\n                    dfs(grid, r, c, q);\n                    found = true;\n                }\n            }\n        }\n        int steps = 0;\n        while (!q.isEmpty()) {\n            int size = q.size();\n            for (int i = 0; i < size; i++) {\n                int[] cell = q.poll();\n                for (int[] d : DIRS) {\n                    int nr = cell[0] + d[0], nc = cell[1] + d[1];\n                    if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) continue;\n                    if (grid[nr][nc] == 1) return steps;\n                    if (grid[nr][nc] == 0) {\n                        grid[nr][nc] = 2;\n                        q.offer(new int[]{nr, nc});\n                    }\n                }\n            }\n            steps++;\n        }\n        return -1;\n    }\n\n    private void dfs(int[][] grid, int r, int c, ArrayDeque<int[]> q) {\n        if (r < 0 || c < 0 || r >= grid.length || c >= grid[0].length\n                || grid[r][c] != 1) return;\n        grid[r][c] = 2;\n        q.offer(new int[]{r, c});\n        for (int[] d : DIRS) dfs(grid, r + d[0], c + d[1], q);\n    }\n}",
+    "bullets": [
+      "Phase 1: DFS marks entire first island as 2 and seeds the queue.",
+      "Phase 2: BFS expands from island border into water (0-cells).",
+      "First time you hit a 1-cell (second island), return step count.",
+      "Combines island flood-fill with multi-source BFS."
+    ]
+  },
+  {
+    "id": "p1091",
+    "name": "Shortest Path in Binary Matrix",
+    "title": "9. Shortest Path in Binary Matrix (LC 1091)",
+    "twin": "Ladder",
+    "why": "BFS shortest path on a grid with 8-directional moves; classic unweighted graph search.",
+    "code": "class Solution {\n    private static final int[][] DIRS = {\n        {-1,-1},{-1,0},{-1,1},{0,-1},{0,1},{1,-1},{1,0},{1,1}\n    };\n\n    public int shortestPathBinaryMatrix(int[][] grid) {\n        int n = grid.length;\n        if (grid[0][0] == 1 || grid[n - 1][n - 1] == 1) return -1;\n        if (n == 1) return 1;\n        ArrayDeque<int[]> q = new ArrayDeque<>();\n        q.offer(new int[]{0, 0});\n        grid[0][0] = 1; // visited\n        int steps = 1;\n        while (!q.isEmpty()) {\n            int size = q.size();\n            for (int i = 0; i < size; i++) {\n                int[] cell = q.poll();\n                for (int[] d : DIRS) {\n                    int nr = cell[0] + d[0], nc = cell[1] + d[1];\n                    if (nr < 0 || nc < 0 || nr >= n || nc >= n || grid[nr][nc] == 1) continue;\n                    if (nr == n - 1 && nc == n - 1) return steps + 1;\n                    grid[nr][nc] = 1;\n                    q.offer(new int[]{nr, nc});\n                }\n            }\n            steps++;\n        }\n        return -1;\n    }\n}",
+    "bullets": [
+      "BFS guarantees shortest path in unweighted grid.",
+      "8 directions including diagonals.",
+      "Mark visited by flipping 0 \u2192 1.",
+      "Level-by-level counting gives path length."
+    ]
+  },
+  {
+    "id": "p79",
+    "name": "Word Search",
+    "title": "10. Word Search (LC 79)",
+    "twin": "Islands",
+    "why": "DFS backtracking on a grid to find a path spelling the target word.",
+    "code": "class Solution {\n    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};\n\n    public boolean exist(char[][] board, String word) {\n        int rows = board.length, cols = board[0].length;\n        for (int r = 0; r < rows; r++) {\n            for (int c = 0; c < cols; c++) {\n                if (dfs(board, word, r, c, 0)) return true;\n            }\n        }\n        return false;\n    }\n\n    private boolean dfs(char[][] board, String word, int r, int c, int idx) {\n        if (idx == word.length()) return true;\n        if (r < 0 || c < 0 || r >= board.length || c >= board[0].length) return false;\n        if (board[r][c] != word.charAt(idx)) return false;\n        char temp = board[r][c];\n        board[r][c] = '#';\n        for (int[] d : DIRS) {\n            if (dfs(board, word, r + d[0], c + d[1], idx + 1)) return true;\n        }\n        board[r][c] = temp;\n        return false;\n    }\n}",
+    "bullets": [
+      "Try DFS from every cell as a potential start.",
+      "Mark visited with '#' to prevent reuse in same path.",
+      "Backtrack by restoring character after exploring.",
+      "Prune when character mismatch or out of bounds."
+    ]
+  },
+  {
+    "id": "p752",
+    "name": "Open the Lock",
+    "title": "11. Open the Lock (LC 752)",
+    "twin": "Ladder",
+    "why": "BFS on implicit state graph where each dial turn is an edge; shortest path to target.",
+    "code": "class Solution {\n    public int openLock(String[] deadends, String target) {\n        Set<String> dead = new HashSet<>(Arrays.asList(deadends));\n        String start = \"0000\";\n        if (dead.contains(start)) return -1;\n        if (start.equals(target)) return 0;\n        ArrayDeque<String> q = new ArrayDeque<>();\n        Set<String> visited = new HashSet<>();\n        q.offer(start);\n        visited.add(start);\n        int moves = 0;\n        while (!q.isEmpty()) {\n            int size = q.size();\n            for (int i = 0; i < size; i++) {\n                String cur = q.poll();\n                for (int pos = 0; pos < 4; pos++) {\n                    for (int delta : new int[]{-1, 1}) {\n                        char[] chars = cur.toCharArray();\n                        chars[pos] = (char) ((chars[pos] - '0' + delta + 10) % 10 + '0');\n                        String next = new String(chars);\n                        if (next.equals(target)) return moves + 1;\n                        if (dead.contains(next) || visited.contains(next)) continue;\n                        visited.add(next);\n                        q.offer(next);\n                    }\n                }\n            }\n            moves++;\n        }\n        return -1;\n    }\n}",
+    "bullets": [
+      "Each lock combination is a node; 8 neighbors (4 wheels \u00d7 2 directions).",
+      "BFS finds minimum moves to target.",
+      "Deadends are blocked nodes \u2014 skip them.",
+      "Modulo arithmetic handles wrap-around (9\u21920, 0\u21929)."
+    ]
+  },
+  {
+    "id": "p1197",
+    "name": "Minimum Knight Moves",
+    "title": "12. Minimum Knight Moves (LC 1197)",
+    "twin": "Ladder",
+    "why": "BFS on an infinite chessboard; each knight jump is one unweighted edge.",
+    "code": "class Solution {\n    private static final int[][] MOVES = {\n        {2,1},{2,-1},{-2,1},{-2,-1},{1,2},{1,-2},{-1,2},{-1,-2}\n    };\n\n    public int minKnightMoves(int x, int y) {\n        x = Math.abs(x);\n        y = Math.abs(y);\n        ArrayDeque<int[]> q = new ArrayDeque<>();\n        Set<String> visited = new HashSet<>();\n        q.offer(new int[]{0, 0});\n        visited.add(\"0,0\");\n        int steps = 0;\n        while (!q.isEmpty()) {\n            int size = q.size();\n            for (int i = 0; i < size; i++) {\n                int[] cell = q.poll();\n                if (cell[0] == x && cell[1] == y) return steps;\n                for (int[] m : MOVES) {\n                    int nr = cell[0] + m[0], nc = cell[1] + m[1];\n                    if (nr < -1 || nc < -1) continue;\n                    String key = nr + \",\" + nc;\n                    if (visited.contains(key)) continue;\n                    visited.add(key);\n                    q.offer(new int[]{nr, nc});\n                }\n            }\n            steps++;\n        }\n        return -1;\n    }\n}",
+    "bullets": [
+      "Symmetry: work in first quadrant via absolute values.",
+      "BFS from (0,0) outward guarantees minimum moves.",
+      "8 fixed knight move offsets.",
+      "Allow nr/nc \u2265 -1 to handle negative quadrants correctly."
+    ]
+  },
+  {
+    "id": "p841",
+    "name": "Keys and Rooms",
+    "title": "13. Keys and Rooms (LC 841)",
+    "twin": "Islands",
+    "why": "DFS/BFS graph traversal from room 0; visit all reachable nodes.",
+    "code": "class Solution {\n    public boolean canVisitAllRooms(List<List<Integer>> rooms) {\n        boolean[] visited = new boolean[rooms.size()];\n        dfs(rooms, visited, 0);\n        for (boolean v : visited) {\n            if (!v) return false;\n        }\n        return true;\n    }\n\n    private void dfs(List<List<Integer>> rooms, boolean[] visited, int room) {\n        visited[room] = true;\n        for (int key : rooms.get(room)) {\n            if (!visited[key]) dfs(rooms, visited, key);\n        }\n    }\n}",
+    "bullets": [
+      "Rooms form a directed graph; keys are edges.",
+      "DFS from room 0 collects all reachable rooms.",
+      "Return true iff every room was visited.",
+      "BFS with a queue is equally valid."
+    ]
+  },
+  {
+    "id": "p207",
+    "name": "Course Schedule",
+    "title": "14. Course Schedule (LC 207)",
+    "twin": "Islands (graph traversal)",
+    "why": "Cycle detection in a directed graph via DFS or Kahn's BFS topological sort.",
+    "code": "class Solution {\n    public boolean canFinish(int numCourses, int[][] prerequisites) {\n        List<List<Integer>> graph = new ArrayList<>();\n        int[] indegree = new int[numCourses];\n        for (int i = 0; i < numCourses; i++) graph.add(new ArrayList<>());\n        for (int[] pre : prerequisites) {\n            graph.get(pre[1]).add(pre[0]);\n            indegree[pre[0]]++;\n        }\n        ArrayDeque<Integer> q = new ArrayDeque<>();\n        for (int i = 0; i < numCourses; i++) {\n            if (indegree[i] == 0) q.offer(i);\n        }\n        int taken = 0;\n        while (!q.isEmpty()) {\n            int course = q.poll();\n            taken++;\n            for (int next : graph.get(course)) {\n                if (--indegree[next] == 0) q.offer(next);\n            }\n        }\n        return taken == numCourses;\n    }\n}",
+    "bullets": [
+      "Build adjacency list and indegree array from prerequisites.",
+      "Kahn's algorithm: BFS courses with indegree 0.",
+      "Decrement indegree when a prerequisite is satisfied.",
+      "Cycle exists iff taken < numCourses (not all courses reachable)."
+    ]
+  },
+  {
+    "id": "p133",
+    "name": "Clone Graph",
+    "title": "15. Clone Graph (LC 133)",
+    "twin": "Islands (graph traversal)",
+    "why": "BFS/DFS traversal with a HashMap to clone each node and its neighbors.",
+    "code": "/*\n// Definition for a Node.\nclass Node {\n    public int val;\n    public List<Node> neighbors;\n    public Node() { val = 0; neighbors = new ArrayList<Node>(); }\n    public Node(int _val) { val = _val; neighbors = new ArrayList<Node>(); }\n    public Node(int _val, ArrayList<Node> _neighbors) {\n        val = _val; neighbors = _neighbors;\n    }\n}\n*/\n\nclass Solution {\n    public Node cloneGraph(Node node) {\n        if (node == null) return null;\n        Map<Node, Node> map = new HashMap<>();\n        ArrayDeque<Node> q = new ArrayDeque<>();\n        q.offer(node);\n        map.put(node, new Node(node.val));\n        while (!q.isEmpty()) {\n            Node cur = q.poll();\n            for (Node neighbor : cur.neighbors) {\n                if (!map.containsKey(neighbor)) {\n                    map.put(neighbor, new Node(neighbor.val));\n                    q.offer(neighbor);\n                }\n                map.get(cur).neighbors.add(map.get(neighbor));\n            }\n        }\n        return map.get(node);\n    }\n}",
+    "bullets": [
+      "BFS visits all nodes reachable from the start.",
+      "HashMap maps original node \u2192 cloned node.",
+      "Create clone on first discovery; wire neighbors via map lookup.",
+      "DFS with same map pattern is equally common in interviews."
+    ]
+  },
+  {
+    "id": "p778",
+    "name": "Swim in Rising Water",
+    "title": "16. Swim in Rising Water (LC 778)",
+    "twin": "Ladder + Oranges",
+    "why": "Binary search on answer time T, then BFS to check if path exists using only cells with height \u2264 T.",
+    "code": "class Solution {\n    private static final int[][] DIRS = {{0,1},{0,-1},{1,0},{-1,0}};\n\n    public int swimInWater(int[][] grid) {\n        int n = grid.length;\n        int lo = Math.max(grid[0][0], grid[n - 1][n - 1]);\n        int hi = n * n - 1;\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (canSwim(grid, mid)) hi = mid;\n            else lo = mid + 1;\n        }\n        return lo;\n    }\n\n    private boolean canSwim(int[][] grid, int t) {\n        int n = grid.length;\n        if (grid[0][0] > t || grid[n - 1][n - 1] > t) return false;\n        boolean[][] visited = new boolean[n][n];\n        ArrayDeque<int[]> q = new ArrayDeque<>();\n        q.offer(new int[]{0, 0});\n        visited[0][0] = true;\n        while (!q.isEmpty()) {\n            int[] cell = q.poll();\n            if (cell[0] == n - 1 && cell[1] == n - 1) return true;\n            for (int[] d : DIRS) {\n                int nr = cell[0] + d[0], nc = cell[1] + d[1];\n                if (nr >= 0 && nc >= 0 && nr < n && nc < n\n                        && !visited[nr][nc] && grid[nr][nc] <= t) {\n                    visited[nr][nc] = true;\n                    q.offer(new int[]{nr, nc});\n                }\n            }\n        }\n        return false;\n    }\n}",
+    "bullets": [
+      "Answer is the minimum time T when a path from top-left to bottom-right exists.",
+      "Binary search T in [max(start,end), n\u00b2-1].",
+      "For each T, BFS checks reachability using cells with height \u2264 T.",
+      "Dijkstra is an alternative but binary search + BFS is simpler to explain.",
+      "Time O(n\u00b2 log n\u00b2) with BFS O(n\u00b2) per check."
+    ]
+  }
+]

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ScanBhav">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0c96a"/>
+      <stop offset="100%" stop-color="#e8b84a"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#071018"/>
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="#101c2a" stroke="#243447" stroke-width="1.5"/>
+  <path d="M32 14v8M32 42v8M14 32h8M42 32h8" stroke="#243447" stroke-width="2" stroke-linecap="round"/>
+  <path d="M20 20a18 18 0 0 1 24 0" fill="none" stroke="url(#g)" stroke-width="3" stroke-linecap="round"/>
+  <path d="M18 40 L26 32 L34 36 L46 22" fill="none" stroke="#2ecf8a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="46" cy="22" r="3" fill="#2ecf8a"/>
+  <circle cx="32" cy="32" r="3" fill="url(#g)"/>
+</svg>

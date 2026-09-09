@@ -1,0 +1,19 @@
+Stock Adda — Local Portfolio
+Updated: 2026-08-05T11:41:06.794962+00:00
+Broker: zerodha
+Tax bracket: slab_30 (30.0%)
+
+OPEN HOLDINGS
+------------------------------------------------------------------------
+TCS.NSE | stock | qty=2.0 | avg=4000.0 | bought=2026-08-05 | id=fcce4987
+JIOFIN.NSE | stock | qty=18.0 | avg=263.55 | bought=2026-08-05 | id=2f7817bf
+APOLLO.BSE | stock | qty=90.0 | avg=396.15 | bought=2026-08-05 | id=96a18830
+RELIANCE.NSE | stock | qty=10.0 | avg=1280.0 | bought=2026-08-05 | id=eb4957db
+
+CLOSED / SOLD
+------------------------------------------------------------------------
+RELIANCE.NSE | qty=5.0 | buy=1290.0 sell=1290.9000244140625 | net=None | pnl=-8.63 | 2026-08-05
+ASIANPAINT.NSE | qty=30.0 | buy=2756.6001 sell=2756.60009765625 | net=None | pnl=-145.37 | 2026-08-05
+
+ALERTS
+------------------------------------------------------------------------

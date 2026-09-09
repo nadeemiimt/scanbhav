@@ -1,0 +1,193 @@
+{
+  "version": 1,
+  "updated_at": "2026-08-05T11:41:06.794962+00:00",
+  "settings": {
+    "broker": "zerodha",
+    "tax_bracket_id": "slab_30",
+    "tax_bracket_rate_pct": 30.0,
+    "ltcg_exemption_used": 0.0
+  },
+  "holdings": [
+    {
+      "id": "fcce4987",
+      "symbol": "TCS.NSE",
+      "name": "TCS.NSE",
+      "asset_type": "stock",
+      "equity_oriented": true,
+      "quantity": 2.0,
+      "avg_price": 4000.0,
+      "buy_charges": {
+        "brokerage": 0.0,
+        "stt": 8.0,
+        "exchange_txn": 0.24,
+        "sebi": 0.008,
+        "stamp_duty": 1.2,
+        "gst": 0.04,
+        "dp_charges": 0.0,
+        "total": 9.49
+      },
+      "total_cost": 8009.49,
+      "broker": "zerodha",
+      "bought_at": "2026-08-05",
+      "created_at": "2026-08-05T05:51:01.081068+00:00"
+    },
+    {
+      "id": "2f7817bf",
+      "symbol": "JIOFIN.NSE",
+      "name": "Jio Financial Services Limited",
+      "asset_type": "stock",
+      "equity_oriented": true,
+      "quantity": 18.0,
+      "avg_price": 263.55,
+      "buy_charges": {
+        "brokerage": 0.0,
+        "stt": 4.74,
+        "exchange_txn": 0.14,
+        "sebi": 0.0047,
+        "stamp_duty": 0.71,
+        "gst": 0.03,
+        "dp_charges": 0.0,
+        "total": 5.63
+      },
+      "total_cost": 4749.53,
+      "broker": "zerodha",
+      "bought_at": "2026-08-05",
+      "created_at": "2026-08-05T05:54:00.701077+00:00"
+    },
+    {
+      "id": "96a18830",
+      "symbol": "APOLLO.BSE",
+      "name": "Apollo Micro Systems Limited",
+      "asset_type": "stock",
+      "equity_oriented": true,
+      "quantity": 90.0,
+      "avg_price": 396.15,
+      "buy_charges": {
+        "brokerage": 0.0,
+        "stt": 35.65,
+        "exchange_txn": 1.06,
+        "sebi": 0.0357,
+        "stamp_duty": 5.35,
+        "gst": 0.2,
+        "dp_charges": 0.0,
+        "total": 42.29
+      },
+      "total_cost": 35695.79,
+      "broker": "zerodha",
+      "bought_at": "2026-08-05",
+      "created_at": "2026-08-05T05:54:54.887417+00:00"
+    },
+    {
+      "id": "eb4957db",
+      "symbol": "RELIANCE.NSE",
+      "name": "Reliance Industries Limited",
+      "asset_type": "stock",
+      "equity_oriented": true,
+      "quantity": 10.0,
+      "avg_price": 1280.0,
+      "buy_charges": {
+        "brokerage": 0.0,
+        "stt": 12.8,
+        "exchange_txn": 0.38,
+        "sebi": 0.0128,
+        "stamp_duty": 1.92,
+        "gst": 0.07,
+        "dp_charges": 0.0,
+        "total": 15.18
+      },
+      "total_cost": 12815.18,
+      "broker": "zerodha",
+      "bought_at": "2026-08-05",
+      "created_at": "2026-08-05T11:41:06.683557+00:00"
+    }
+  ],
+  "closed": [
+    {
+      "holding_id": "d31ed0a1",
+      "symbol": "RELIANCE.NSE",
+      "asset_type": "stock",
+      "quantity": 5.0,
+      "buy_price": 1290.0,
+      "sell_price": 1290.9000244140625,
+      "intraday": true,
+      "holding_days": 0,
+      "broker": "zerodha",
+      "buy_turnover": 6450.0,
+      "sell_turnover": 6454.5,
+      "buy_charges_allocated": 7.65,
+      "sell_charges": {
+        "brokerage": 1.94,
+        "stt": 1.61,
+        "exchange_txn": 0.19,
+        "sebi": 0.0065,
+        "stamp_duty": 0.0,
+        "gst": 0.38,
+        "dp_charges": 0.0,
+        "total": 4.13
+      },
+      "deduction_total": 11.78,
+      "gross_pnl": 4.5,
+      "pnl_after_charges": -7.28,
+      "tax": {
+        "gain": 4.5,
+        "taxable_gain": 4.5,
+        "tax": 1.35,
+        "regime": "intraday_slab",
+        "rate_pct": 30.0,
+        "exemption_applied": 0.0,
+        "is_long_term": false
+      },
+      "pnl_after_tax": -8.63,
+      "net_amount_you_get": 6449.02,
+      "tax_rules_note": "Illustrative FY rules for listed equity & equity-oriented MF. Debt MF often taxed at slab. Confirm with a tax professional.",
+      "name": "RELIANCE.NSE",
+      "bought_at": "2026-08-05",
+      "sold_at": "2026-08-05",
+      "closed_at": "2026-08-05T05:44:10.737060+00:00"
+    },
+    {
+      "holding_id": "60275338",
+      "symbol": "ASIANPAINT.NSE",
+      "asset_type": "stock",
+      "quantity": 30.0,
+      "buy_price": 2756.6001,
+      "sell_price": 2756.60009765625,
+      "intraday": true,
+      "holding_days": 0,
+      "broker": "zerodha",
+      "buy_turnover": 82698.0,
+      "sell_turnover": 82698.0,
+      "buy_charges_allocated": 98.1,
+      "sell_charges": {
+        "brokerage": 20.0,
+        "stt": 20.67,
+        "exchange_txn": 2.46,
+        "sebi": 0.0827,
+        "stamp_duty": 0.0,
+        "gst": 4.06,
+        "dp_charges": 0.0,
+        "total": 47.27
+      },
+      "deduction_total": 145.37,
+      "gross_pnl": -0.0,
+      "pnl_after_charges": -145.37,
+      "tax": {
+        "gain": -0.0,
+        "taxable_gain": 0.0,
+        "tax": 0.0,
+        "regime": "loss_or_flat",
+        "rate_pct": 0.0,
+        "exemption_applied": 0.0,
+        "is_long_term": false
+      },
+      "pnl_after_tax": -145.37,
+      "net_amount_you_get": 82650.73,
+      "tax_rules_note": "Illustrative FY rules for listed equity & equity-oriented MF. Debt MF often taxed at slab. Confirm with a tax professional.",
+      "name": "ASIANPAINT.NSE",
+      "bought_at": "2026-08-05",
+      "sold_at": "2026-08-05",
+      "closed_at": "2026-08-05T05:44:10.738504+00:00"
+    }
+  ],
+  "alerts": []
+}
