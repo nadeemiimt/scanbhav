@@ -20,13 +20,13 @@ router = APIRouter(tags=["trading"])
 
 
 @router.get("/api/trading/config")
-def trading_config_get() -> dict[str, Any]:
+def trading_config_get(fast: bool = True) -> dict[str, Any]:
     cfg = load_trading_config()
-    quote_fn = lambda s: _quote_symbol(s)
+    quote_fn = None if fast else (lambda s: _quote_symbol(s))
     return {
         **cfg,
         "ledger": ledger_summary(),
-        "risk_snapshot": get_risk_snapshot(quote_fn),
+        "risk_snapshot": get_risk_snapshot(quote_fn, cache_only=fast),
         "disclaimer": "Educational paper/live routing. Live orders require live_armed + broker credentials.",
     }
 
@@ -138,7 +138,8 @@ def trading_clear_halt() -> dict[str, Any]:
 
 @router.get("/api/trading/risk")
 def trading_risk_get() -> dict[str, Any]:
-    return get_risk_snapshot(lambda s: _quote_symbol(s))
+    """Cache-first marks; live quote only for symbols missing stream LTP."""
+    return get_risk_snapshot(lambda s: _quote_symbol(s), cache_only=False)
 
 
 @router.get("/api/trading/scoreboard")

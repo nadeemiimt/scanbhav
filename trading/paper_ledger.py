@@ -506,6 +506,10 @@ def close_orphan_mis_positions(
 def daily_stats() -> dict[str, Any]:
     day = _today_ist()
     data = _load(DAILY_PATH, {"days": {}})
+    days = data.get("days")
+    if not isinstance(days, dict):
+        days = {}
+        data["days"] = days
     default = {
         "date": day,
         "orders": 0,
@@ -516,7 +520,7 @@ def daily_stats() -> dict[str, Any]:
         "halt_code": None,
         "halt_reason": None,
     }
-    return {**default, **(data.get("days", {}).get(day) or {})}
+    return {**default, **(days.get(day) or {})}
 
 
 def is_trading_halted() -> tuple[bool, str]:

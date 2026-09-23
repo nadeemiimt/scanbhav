@@ -112,9 +112,9 @@ export function brokerStreamWsUrl() {
 }
 
 /** GET that returns null instead of throwing (for optional dashboard widgets). */
-export async function apiGetOptional(path) {
+export async function apiGetOptional(path, _query = {}, config) {
   try {
-    return await apiGet(path)
+    return await apiGet(path, config)
   } catch {
     return null
   }

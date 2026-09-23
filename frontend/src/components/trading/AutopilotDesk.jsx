@@ -260,11 +260,16 @@ export function AutopilotDesk() {
   const refresh = useCallback(async ({ clearError = false } = {}) => {
     if (clearError) setError('')
     try {
-      const cfg = await apiGet('/api/trading/config')
+      const cfg = await apiGet('/api/trading/config?fast=true')
       setConfig(cfg)
       setLedger(cfg.ledger)
       setWatchInput((cfg.watchlist || []).join(', '))
       applyDeskPrefsFromConfig(cfg)
+
+      void apiGetOptional('/api/trading/risk', {}, { timeoutMs: 90000 }).then((risk) => {
+        if (!risk || typeof risk !== 'object') return
+        setConfig((prev) => (prev ? { ...prev, risk_snapshot: risk } : prev))
+      })
 
       setSecondaryLoading(true)
       const [

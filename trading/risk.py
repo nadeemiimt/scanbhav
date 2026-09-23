@@ -14,10 +14,26 @@ class RiskBlocked(Exception):
         self.message = message
 
 
+def cached_quote_price(symbol: str, *, max_age_seconds: float = 3600.0) -> Optional[float]:
+    """LTP from in-memory stream cache only — no network."""
+    try:
+        from brokers.quote_cache import get_ltp
+
+        row = get_ltp(symbol, max_age_seconds=max_age_seconds)
+        if row:
+            px = float(row.get("price") or 0)
+            if px > 0:
+                return px
+    except Exception:
+        pass
+    return None
+
+
 def compute_unrealized_pnl(
     quote_fn: Optional[Callable[[str], float]] = None,
     *,
     session_id: str | None = None,
+    cache_only: bool = False,
 ) -> float:
     """Mark open MIS positions to market; returns total unrealized INR."""
     total = 0.0
@@ -29,7 +45,10 @@ def compute_unrealized_pnl(
             continue
         sym = str(pos.get("symbol") or "")
         mark = entry
-        if quote_fn:
+        cached = cached_quote_price(sym)
+        if cached is not None:
+            mark = cached
+        elif quote_fn and not cache_only:
             try:
                 px = float(quote_fn(sym))
                 if px > 0:
@@ -40,12 +59,16 @@ def compute_unrealized_pnl(
     return round(total, 2)
 
 
-def get_risk_snapshot(quote_fn: Optional[Callable[[str], float]] = None) -> dict[str, Any]:
+def get_risk_snapshot(
+    quote_fn: Optional[Callable[[str], float]] = None,
+    *,
+    cache_only: bool = False,
+) -> dict[str, Any]:
     cfg = load_trading_config()
     risk = cfg.get("risk") or {}
     daily = daily_stats()
     halted, halt_reason = is_trading_halted()
-    unreal = compute_unrealized_pnl(quote_fn)
+    unreal = compute_unrealized_pnl(quote_fn, cache_only=cache_only)
     realized = float(daily.get("realized_pnl_inr") or 0)
     buy_notional = float(daily.get("buy_notional_inr") or 0)
     return {

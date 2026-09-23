@@ -94,7 +94,7 @@ def reset_learning_json_files() -> dict[str, Any]:
     _write_json(TRADING_DIR / "auto_profile_state.json", {})
     resets["auto_profile_state"] = "cleared"
 
-    _write_json(TRADING_DIR / "daily_stats.json", {"days": []})
+    _write_json(TRADING_DIR / "daily_stats.json", {"days": {}})
     resets["daily_stats"] = "cleared"
 
     _write_json(TRADING_DIR / "latency_compensation.json", {"symbols": {}})
