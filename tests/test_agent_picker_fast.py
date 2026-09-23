@@ -52,7 +52,7 @@ def test_allocate_budget_picks_completes_quickly(monkeypatch):
 
     monkeypatch.setattr("analysis.social_volume.fetch_social_volume", _boom)
     t0 = time.time()
-    picks, candidates = allocate_budget_picks(
+    picks, candidates, _funnel = allocate_budget_picks(
         rows,
         limits=_limits(),
         max_picks=8,

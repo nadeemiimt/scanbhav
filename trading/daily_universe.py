@@ -93,6 +93,18 @@ def run_daily_universe(
     except Exception as exc:
         steps["morning_scan"] = {"error": str(exc)[:200]}
 
+    if ap.get("backtest_agent_enabled", True):
+        try:
+            from trading.backtest_agent import run_backtest_learning_job
+
+            steps["backtest_agent"] = run_backtest_learning_job(
+                load_rows=load_rows,
+                limit=int(ap.get("backtest_agent_symbol_limit") or 35),
+                force=force,
+            )
+        except Exception as exc:
+            steps["backtest_agent"] = {"error": str(exc)[:200]}
+
     # Conviction scan — optional research pass (kept for PDF / deep dossier path)
     if run_conviction or ap.get("daily_universe_conviction_enabled", False):
         try:

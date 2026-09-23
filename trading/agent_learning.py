@@ -163,6 +163,17 @@ def agent_learning_score(
     meta["rag_adj"] = rag_adj
     meta["rag_lessons"] = rag_lessons[:3]
 
+    try:
+        from trading.backtest_agent import backtest_score_adjustment
+
+        bt_adj, bt_meta = backtest_score_adjustment(sym)
+        if bt_adj:
+            total += bt_adj
+            reasons.append(f"backtest_{bt_adj:+.1f}")
+            meta["backtest"] = bt_meta
+    except Exception:
+        pass
+
     news_score = row.get("news_score")
     pattern_score = row.get("pattern_score")
     if news_score is not None and pattern_score is not None:
@@ -186,6 +197,8 @@ def enrich_agent_candidate_rows(
     *,
     market_provider: str = "auto",
     top_n: int | None = None,
+    priority_symbols: set[str] | None = None,
+    fast_cycle: bool = False,
 ) -> list[dict[str, Any]]:
     """
     Deep-analyze top scan rows missing technicals — same path curated uses for missing symbols.
@@ -194,7 +207,7 @@ def enrich_agent_candidate_rows(
     if not cfg["enabled"]:
         return rows
 
-    n = top_n or cfg["deep_analyze_top_n"]
+    n = top_n or (25 if fast_cycle else max(cfg["deep_analyze_top_n"], 40))
     ranked = sorted(
         rows,
         key=lambda r: float(r.get("composite_score") or 0),
@@ -202,6 +215,40 @@ def enrich_agent_candidate_rows(
     )
     by_sym = {str(r.get("symbol") or "").upper(): dict(r) for r in rows}
     enriched = 0
+    priority = {str(s or "").upper().replace(".NSE", "") for s in (priority_symbols or set())}
+
+    def _enrich_one(row: dict[str, Any]) -> None:
+        nonlocal enriched
+        sym = str(row.get("symbol") or "").upper()
+        if not sym:
+            return
+        needs = (
+            row.get("atr_pct") is None
+            or row.get("horizon_return_pct") is None
+            or float(row.get("composite_score") or 0) <= 0
+        )
+        if not needs:
+            return
+        try:
+            from trading.scheduler import _analyze_symbol
+
+            a = _analyze_symbol(sym, market_provider)
+            merged = {**row, **{
+                k: v for k, v in a.items()
+                if v is not None and (row.get(k) is None or k in {"atr_pct", "horizon_return_pct", "composite_score", "stance", "rsi_14"})
+            }}
+            if merged.get("composite_stance") and not merged.get("stance"):
+                merged["stance"] = str(merged.get("composite_stance") or "").lower()
+            by_sym[sym] = merged
+            enriched += 1
+        except Exception:
+            return
+
+    for base in priority:
+        sym = f"{base}.NSE" if not base.endswith(".NSE") else base
+        row = by_sym.get(sym.upper()) or by_sym.get(sym)
+        if row:
+            _enrich_one(row)
 
     for row in ranked[:n]:
         sym = str(row.get("symbol") or "").upper()
@@ -212,32 +259,20 @@ def enrich_agent_candidate_rows(
             or row.get("horizon_return_pct") is None
             or float(row.get("composite_score") or 0) <= 0
         )
-        if not needs:
-            continue
-        try:
-            from trading.scheduler import _analyze_symbol
-
-            a = _analyze_symbol(sym, market_provider)
-            merged = {**row, **{
-                k: v for k, v in a.items()
-                if v is not None and (row.get(k) is None or k in {"atr_pct", "horizon_return_pct", "composite_score", "stance", "rsi_14"})
-            }}
-            by_sym[sym] = merged
-            enriched += 1
-        except Exception:
-            continue
+        _enrich_one(row)
 
     out = list(by_sym.values())
     out.sort(key=lambda r: float(r.get("composite_score") or 0), reverse=True)
 
-    try:
-        from trading.market_news_intel import batch_enrich_rows_with_news
-        from trading.intraday_patterns import batch_attach_pattern_scores
+    if not fast_cycle:
+        try:
+            from trading.market_news_intel import batch_enrich_rows_with_news
+            from trading.intraday_patterns import batch_attach_pattern_scores
 
-        out, _news_meta = batch_enrich_rows_with_news(out, top_n=n)
-        out = batch_attach_pattern_scores(out, top_n=n)
-    except Exception:
-        pass
+            out, _news_meta = batch_enrich_rows_with_news(out, top_n=n)
+            out = batch_attach_pattern_scores(out, top_n=n)
+        except Exception:
+            pass
 
     out.sort(key=lambda r: float(r.get("composite_score") or 0), reverse=True)
     return out

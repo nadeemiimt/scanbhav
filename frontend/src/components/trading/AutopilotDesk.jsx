@@ -1284,13 +1284,65 @@ export function AutopilotDesk() {
               </p>
             </div>
           )}
+          {dualMode && session?.desk_gap && (
+            <div className="session-desk-gap panel-inset" style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8 }}>
+              <p className="eyebrow">DESK GAP (AI vs CURATED)</p>
+              <p className="session-desk-card-stat">
+                Net gap{' '}
+                <strong className={(session.desk_gap.net_gap_inr ?? 0) >= 0 ? 'up' : 'down'}>
+                  {money.format(session.desk_gap.net_gap_inr ?? 0)}
+                </strong>
+                <span className="subtle">
+                  {' '}
+                  (AI {money.format(session.desk_gap.agent?.pnl?.net ?? 0)}
+                  {' · '}
+                  Curated {money.format(session.desk_gap.curated?.pnl?.net ?? 0)})
+                </span>
+              </p>
+              <p className="subtle">
+                Overlap {session.desk_gap.overlap_open_symbols?.length ?? 0} open
+                {' · '}
+                Coverage {session.desk_gap.curated_coverage_pct ?? 0}%
+                {' · '}
+                AI {session.desk_gap.agent?.open_count ?? 0} open / {session.desk_gap.agent?.trade_count ?? 0} trades
+                {' · '}
+                Curated {session.desk_gap.curated?.open_count ?? 0} open / {session.desk_gap.curated?.trade_count ?? 0} trades
+              </p>
+              {(session.desk_gap.curated_not_on_agent?.length ?? 0) > 0 && (
+                <p className="down subtle">
+                  Curated not on AI: {session.desk_gap.curated_not_on_agent.slice(0, 8).join(', ')}
+                  {session.desk_gap.curated_not_on_agent.length > 8 ? '…' : ''}
+                </p>
+              )}
+              {session.desk_gap.agent_last_pick?.affordable_candidates === 0 && (
+                <p className="subtle">Last AI cycle: 0 affordable candidates — scheduler will retry with curated overlap.</p>
+              )}
+              {session.desk_gap.agent_last_pick?.filter_funnel && (
+                <p className="subtle">
+                  Nifty funnel: {session.desk_gap.agent_last_pick.filter_funnel.nifty500_scanned} scanned →{' '}
+                  {session.desk_gap.agent_last_pick.filter_funnel.after_agent_rank} ranked →{' '}
+                  {session.desk_gap.agent_last_pick.filter_funnel.sized_candidates} sized →{' '}
+                  {session.desk_gap.agent_last_pick.filter_funnel.final_picks} picks
+                  {session.desk_gap.agent_last_pick.filter_funnel.n500_expansion_picks != null && (
+                    <>
+                      {' '}
+                      ({session.desk_gap.agent_last_pick.filter_funnel.n500_expansion_picks} Nifty-only,{' '}
+                      {session.desk_gap.agent_last_pick.filter_funnel.curated_mirror_picks} curated mirror)
+                    </>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
           <div className="session-progress-desks">
             {(activeSessions.length ? activeSessions : (activeSession ? [activeSession] : [])).map(desk => {
               const deskEvents = sessionEvents.filter(e => e.session_id === desk.id || e._desk?.startsWith(desk.pick_mode === 'agent_auto' ? 'AI' : 'Curated'))
               const lastEv = deskEvents[0]
               const deskTrades = sessionTrades.filter(t => t.session_id === desk.id)
               const buys = deskTrades.filter(t => t.side === 'buy').length
+                || Number(desk.buy_count ?? 0)
               const sells = deskTrades.filter(t => t.side === 'sell').length
+                || Number(desk.sell_count ?? 0)
               const pnl = deskPnl(desk)
               return (
                 <article key={desk.id} className="session-desk-card">
@@ -1313,6 +1365,9 @@ export function AutopilotDesk() {
                   </p>
                   <p className="subtle">
                     {desk.cycle_count ?? desk.cycles?.length ?? 0} cycles · {buys} buys · {sells} sells
+                    {(desk.open_position_count ?? 0) > 0 && (
+                      <> · {desk.open_position_count} open</>
+                    )}
                   </p>
                   {desk.caps && (
                     <p className="subtle">Budget {money.format(desk.caps.max_daily_notional_inr)}</p>

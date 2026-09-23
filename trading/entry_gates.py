@@ -211,11 +211,14 @@ def evaluate_entry_gates(
     *,
     session_id: Optional[str] = None,
     pick_mode: Optional[str] = None,
+    skip_rag_block: bool = False,
 ) -> dict[str, Any]:
     """Run cooldown then RAG gates (first failure wins)."""
     cooldown = evaluate_stop_cooldown(symbol, session_id=session_id)
     if not cooldown.get("allowed"):
         return cooldown
+    if skip_rag_block:
+        return {"allowed": True, "reason": "entry_gates_ok_curated_mirror", "cooldown": cooldown, "rag": {"skipped": True}}
     rag = evaluate_rag_buy_gate(symbol, session_id=session_id, pick_mode=pick_mode)
     if not rag.get("allowed"):
         return rag

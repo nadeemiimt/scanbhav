@@ -31,6 +31,20 @@ def trading_config_get(fast: bool = True) -> dict[str, Any]:
     }
 
 
+@router.get("/api/trading/backtest-agent/status")
+def trading_backtest_agent_status() -> dict[str, Any]:
+    from trading.backtest_agent import backtest_agent_status
+
+    return backtest_agent_status()
+
+
+@router.post("/api/trading/backtest-agent/run")
+def trading_backtest_agent_run(force: bool = False) -> dict[str, Any]:
+    from trading.backtest_agent import run_backtest_learning_job
+
+    return run_backtest_learning_job(force=force)
+
+
 @router.get("/api/trading/profit-profile")
 def trading_profit_profile_get() -> dict[str, Any]:
     from trading.profit_profiles import profit_profile_status

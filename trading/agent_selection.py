@@ -192,6 +192,7 @@ def agent_candidate_gate(
     cfg: dict[str, Any] | None = None,
     ist_mins: int | None = None,
     check_session_time: bool = True,
+    curated_priority: bool = False,
 ) -> tuple[bool, str]:
     cfg = cfg or agent_selection_cfg()
     ist_mins = ist_mins if ist_mins is not None else ist_minutes_now()
@@ -200,19 +201,24 @@ def agent_candidate_gate(
         return False, "agent_late_session_no_buy"
 
     atr = float(row.get("atr_pct") or 0)
-    if atr < cfg["min_atr_pct"] * 0.9:
+    atr_floor = cfg["min_atr_pct"] * (0.55 if curated_priority else 0.9)
+    if atr > 0 and atr < atr_floor:
         return False, f"atr_too_low_{atr:.1f}"
 
     rsi = row.get("rsi_14")
-    if isinstance(rsi, (int, float)) and float(rsi) > cfg["max_rsi_entry"]:
+    if isinstance(rsi, (int, float)) and float(rsi) > cfg["max_rsi_entry"] + (6 if curated_priority else 0):
         return False, f"rsi_extended_{float(rsi):.0f}"
 
     try:
         horizon = float(row.get("horizon_return_pct") or 0)
     except (TypeError, ValueError):
         horizon = 0.0
-    if horizon < 0:
-        return False, "negative_horizon"
+    composite = float(row.get("composite_score") or 0)
+    # MIS intraday: mild negative horizon is common on scan rows — block only weak names.
+    if horizon < -1.5 and not curated_priority:
+        return False, f"negative_horizon_{horizon:.1f}"
+    if horizon < 0 and composite < 58 and not curated_priority:
+        return False, f"negative_horizon_{horizon:.1f}"
 
     if cfg["block_quality_fail"] and row.get("quality_ok") is False:
         qs = float(row.get("quality_score") or 0)
@@ -263,11 +269,19 @@ def rank_rows_for_agent(
     for row in rows:
         sym = str(row.get("symbol") or "").upper()
         sym_base = sym.replace(".NSE", "")
-        if not sym or sym in held or sym_base in cross:
+        if not sym or sym in held:
+            continue
+        is_curated = sym_base in curated
+        if sym_base in cross and not is_curated:
             continue
         composite = float(row.get("composite_score") or 0)
         stance = str(row.get("stance") or "").lower()
-        if composite < min_composite or stance not in BULLISH_STANCES:
+        min_comp = min_composite * (0.82 if is_curated else 1.0)
+        if composite < min_comp:
+            continue
+        if stance not in BULLISH_STANCES and not is_curated:
+            continue
+        if is_curated and stance not in BULLISH_STANCES and composite < min_composite * 0.65:
             continue
         if float(row.get("price") or 0) <= 0:
             continue
@@ -275,7 +289,11 @@ def rank_rows_for_agent(
             ranked.append((composite, row))
             continue
         allowed, _reason = agent_candidate_gate(
-            row, cfg=cfg, ist_mins=ist_mins, check_session_time=False
+            row,
+            cfg=cfg,
+            ist_mins=ist_mins,
+            check_session_time=False,
+            curated_priority=is_curated,
         )
         if not allowed:
             continue

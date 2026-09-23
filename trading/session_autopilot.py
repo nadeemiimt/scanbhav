@@ -114,6 +114,22 @@ def _session_realized_pnl(session_id: str) -> float:
     )
 
 
+def _session_buy_order_count(session_id: str) -> int:
+    from trading.pick_learning import list_session_trades
+
+    return sum(
+        1
+        for t in list_session_trades(session_id, limit=500)
+        if str(t.get("side") or "").lower() == "buy"
+    )
+
+
+def _session_max_orders(session: dict[str, Any]) -> int:
+    """Per-desk daily buy cap in dual mode (independent of other desk)."""
+    n = int(session.get("max_concurrent_picks") or 3)
+    return max(12, n * 4)
+
+
 def _session_buy_notional(session_id: str) -> float:
     from trading.pick_learning import list_session_trades
 
@@ -178,6 +194,8 @@ def _hydrate_session(session: dict[str, Any]) -> dict[str, Any]:
     cycle_events = list_session_events(sid, limit=500, event_type="cycle_complete")
     out = dict(session)
     out["trade_count"] = len(trades)
+    out["buy_count"] = sum(1 for t in trades if str(t.get("side") or "").lower() == "buy")
+    out["sell_count"] = sum(1 for t in trades if str(t.get("side") or "").lower() == "sell")
     out["event_count"] = len(events)
     out["cycle_count"] = len(cycle_events) or len(session.get("cycles") or [])
     sell_pnl = sum(float(t.get("pnl_inr") or 0) for t in trades if t.get("side") == "sell" and t.get("pnl_inr") is not None)
@@ -501,7 +519,10 @@ def start_session(
         "max_open_positions": session["max_concurrent_picks"] * len(data["active_session_ids"]),
     }
     cfg = load_trading_config()
-    if int((cfg.get("risk") or {}).get("max_orders_per_day") or 5) < 30:
+    per_desk_orders = _session_max_orders(session)
+    if is_dual:
+        risk_patch["max_orders_per_day"] = max(60, per_desk_orders * len(data["active_session_ids"]))
+    elif int((cfg.get("risk") or {}).get("max_orders_per_day") or 5) < 30:
         risk_patch["max_orders_per_day"] = 30
 
     if persist_trading_config:
@@ -909,9 +930,20 @@ def session_status() -> dict[str, Any]:
     }
     orphan_pnl = _orphan_desk_pnl(active_ids)
 
+    desk_gap = None
+    gap_log = None
+    if len(active_list) > 1:
+        from trading.desk_gap_tracker import compute_desk_gap, load_gap_history
+
+        positions = (ledger_summary().get("positions") or [])
+        desk_gap = compute_desk_gap(active_list, positions=positions)
+        gap_log = load_gap_history(limit=24)
+
     return {
         "active": bool(active_list),
         "dual_mode": len(active_list) > 1,
+        "desk_gap": desk_gap,
+        "desk_gap_history": gap_log,
         "dual_desk_pnl": dual_pnl if len(active_list) > 1 else None,
         "desk_pnl": dual_pnl if active_list else None,
         "orphan_pnl": orphan_pnl if orphan_pnl.get("position_count") else None,
@@ -1407,10 +1439,31 @@ def run_session_cycle(
                 )
                 cfg = load_trading_config()
                 ap = cfg.get("autopilot") or {}
-        from trading.agent_picker import run_autonomous_stock_picks, run_given_stock_trades
+        from trading.agent_picker import (
+            merge_pick_results,
+            run_autonomous_stock_picks,
+            run_given_stock_trades,
+        )
+        from trading.desk_universe import agent_curated_superset_symbols
 
         if pick_mode == "agent_auto":
-            pick_result = run_autonomous_stock_picks(execute=True, max_picks=max_picks, session=session)
+            curated_syms = sorted(agent_curated_superset_symbols(session))
+            parts: list[dict[str, Any]] = []
+            if curated_syms:
+                mirror_cap = int(ap.get("agent_max_curated_mirror_picks") or max(1, max_picks // 2))
+                parts.append(
+                    run_given_stock_trades(
+                        execute=True,
+                        max_picks=min(mirror_cap, len(curated_syms)),
+                        symbols=[f"{s}.NSE" if not str(s).endswith(".NSE") else s for s in curated_syms],
+                        session=session,
+                        pick_mode_override="session_agent_auto",
+                    )
+                )
+            parts.append(
+                run_autonomous_stock_picks(execute=True, max_picks=max_picks, session=session)
+            )
+            pick_result = merge_pick_results(*parts)
         else:
             symbols = list(session.get("curated_symbols") or [])
             pick_result = run_given_stock_trades(
@@ -1567,11 +1620,24 @@ def run_all_session_cycles(
                         "pick_mode": sess.get("pick_mode"),
                     }
 
+    gap_payload = None
+    if len(sessions) > 1:
+        try:
+            from trading.desk_gap_tracker import append_gap_snapshot, compute_desk_gap
+            from trading.paper_ledger import open_positions
+
+            hydrated = [_hydrate_session(s) for s in sessions]
+            gap_payload = compute_desk_gap(hydrated, positions=open_positions("mis"))
+            append_gap_snapshot(gap_payload)
+        except Exception:
+            pass
+
     return {
         "multi_session": True,
         "parallel": len(sessions) > 1,
         "session_count": len(sessions),
         "cycles": cycles,
+        "desk_gap": gap_payload,
         "completed_sessions": [c.get("completion_reason") for c in cycles if c.get("completed")],
     }
 

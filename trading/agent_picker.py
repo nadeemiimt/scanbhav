@@ -27,8 +27,8 @@ def _resolve_max_picks(max_picks: int) -> int:
 def _agent_scan_top_n() -> int:
     """Max morning-scan rows to deep-score per agent cycle (rest are skipped)."""
     ap = load_trading_config().get("autopilot") or {}
-    n = int(ap.get("agent_scan_top_n") or ap.get("morning_scan_rag_top") or 80)
-    return max(20, min(200, n))
+    n = int(ap.get("agent_scan_top_n") or ap.get("morning_scan_rag_top") or 120)
+    return max(40, min(250, n))
 
 
 def _prefilter_bullish_rows(
@@ -96,31 +96,51 @@ def _budget_limits(session: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     open_p = open_positions("mis")
 
     max_per_order = float(risk.get("max_position_inr") or 50000)
-    max_orders = int(risk.get("max_orders_per_day") or 5)
-    orders_left = max(0, max_orders - int(daily.get("orders") or 0))
-
     if session:
         caps = session.get("caps") or {}
         session_id = str(session.get("id") or "")
         max_daily = float(caps.get("max_daily_notional_inr") or risk.get("max_daily_notional_inr") or 100000)
         used_notional = 0.0
         cross_desk: set[str] = set()
+        mandatory_curated: set[str] = set()
+        orders_left = 0
         try:
-            from trading.session_autopilot import _session_buy_notional, _session_open_symbols, cross_desk_held_symbols
+            from trading.session_autopilot import (
+                _session_buy_notional,
+                _session_buy_order_count,
+                _session_max_orders,
+                _session_open_symbols,
+                cross_desk_held_symbols,
+            )
 
             used_notional = _session_buy_notional(session_id)
             held = _session_open_symbols(session_id)
             cross_desk = cross_desk_held_symbols(session_id)
+            ap_dual = load_trading_config().get("autopilot") or {}
+            if ap_dual.get("dual_mode"):
+                orders_left = max(0, _session_max_orders(session) - _session_buy_order_count(session_id))
+            else:
+                max_orders = int(risk.get("max_orders_per_day") or 5)
+                orders_left = max(0, max_orders - int(daily.get("orders") or 0))
+            from trading.desk_universe import agent_curated_superset_symbols, filter_cross_desk_for_agent
+
+            cross_desk = filter_cross_desk_for_agent(cross_desk, session=session)
+            mandatory_curated = agent_curated_superset_symbols(session)
         except Exception:
             held = {p.get("symbol") for p in open_p}
             used_notional = float(daily.get("buy_notional_inr") or 0)
+            max_orders = int(risk.get("max_orders_per_day") or 5)
+            orders_left = max(0, max_orders - int(daily.get("orders") or 0))
         max_open = int(session.get("max_concurrent_picks") or risk.get("max_open_positions") or 3)
         slots = max(0, max_open - len(held))
     else:
         held = {p.get("symbol") for p in open_p}
         cross_desk = set()
+        mandatory_curated = set()
         max_daily = float(risk.get("max_daily_notional_inr") or 100000)
         used_notional = float(daily.get("buy_notional_inr") or 0)
+        max_orders = int(risk.get("max_orders_per_day") or 5)
+        orders_left = max(0, max_orders - int(daily.get("orders") or 0))
         max_open = int(risk.get("max_open_positions") or 3)
         slots = max(0, max_open - len(open_p))
 
@@ -136,6 +156,7 @@ def _budget_limits(session: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         "orders_left": orders_left,
         "held_symbols": held,
         "cross_desk_symbols": cross_desk,
+        "mandatory_curated_symbols": mandatory_curated if session else set(),
         "halted": bool(daily.get("halted")),
         "session_id": str(session.get("id") or "") if session else None,
     }
@@ -430,6 +451,62 @@ def _size_for_budget(
     return {"quantity": qty, "notional_inr": notional, "price": price, "sizing_method": "max_cap"}
 
 
+def _merge_mandatory_curated_picks(
+    picks: list[dict[str, Any]],
+    candidates: list[dict[str, Any]],
+    *,
+    mandatory: set[str],
+    held: set[str],
+    max_picks: int,
+    max_mandatory: int | None = None,
+) -> list[dict[str, Any]]:
+    """Ensure curated overlap names are prioritized on the agent desk."""
+    if not mandatory:
+        return picks
+    cap = max_mandatory if max_mandatory is not None else max(1, min(len(mandatory), max(1, max_picks // 2)))
+    held_base = {str(s or "").upper().replace(".NSE", "") for s in held}
+    by_sym: dict[str, dict[str, Any]] = {}
+    for cand in candidates:
+        sym = str(cand.get("symbol") or "").upper()
+        base = sym.replace(".NSE", "")
+        if base in mandatory and base not in held_base:
+            by_sym.setdefault(base, cand)
+    mandatory_sorted = sorted(
+        by_sym.values(),
+        key=lambda x: (
+            x.get("edge_score") or 0,
+            x.get("expected_profit_inr") or 0,
+        ),
+        reverse=True,
+    )[:cap]
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for cand in mandatory_sorted:
+        sym = str(cand.get("symbol") or "").upper().replace(".NSE", "")
+        if sym in seen:
+            continue
+        out.append({**cand, "mandatory_curated": True})
+        seen.add(sym)
+    for cand in picks:
+        sym = str(cand.get("symbol") or "").upper().replace(".NSE", "")
+        if sym in seen:
+            continue
+        out.append(cand)
+        seen.add(sym)
+        if len(out) >= max_picks:
+            break
+    if len(out) < max_picks:
+        for cand in picks:
+            sym = str(cand.get("symbol") or "").upper().replace(".NSE", "")
+            if sym in seen:
+                continue
+            out.append(cand)
+            seen.add(sym)
+            if len(out) >= max_picks:
+                break
+    return out[:max_picks]
+
+
 def allocate_budget_picks(
     rows: list[dict[str, Any]],
     *,
@@ -456,8 +533,10 @@ def allocate_budget_picks(
     risk_cfg = cfg.get("risk") or {}
     min_notional = float(ap_cfg.get("min_trade_notional_inr") or risk_cfg.get("min_trade_notional_inr") or 25_000)
     curated_set: set[str] = set()
+    mandatory: set[str] = set()
     if agent_smart:
-        curated_set = {
+        mandatory = {str(s or "").upper().replace(".NSE", "") for s in (limits.get("mandatory_curated_symbols") or set())}
+        curated_set = mandatory | {
             str(s or "").upper().replace(".NSE", "")
             for s in (
                 (ap_cfg.get("curated_symbols") or [])
@@ -465,14 +544,22 @@ def allocate_budget_picks(
             )
         }
     max_trades = min(max(1, max_picks), slots, orders_left)
+    empty_funnel = {"nifty500_scanned": len(rows), "after_agent_rank": 0, "sized_candidates": 0, "final_picks": 0}
     if max_trades <= 0 or remaining <= 0 or limits.get("halted"):
-        return [], []
+        return [], [], empty_funnel
 
     stop_pct = float(ap_cfg.get("stop_pct") or risk_cfg.get("default_stop_pct") or 1.0)
     from trading.intraday_rules import dynamic_target_pct
 
     candidates: list[dict[str, Any]] = []
-    scan_top_n = max(_agent_scan_top_n(), max_trades * 12)
+    scan_top_n = max(_agent_scan_top_n(), max_trades * 15)
+    funnel: dict[str, Any] = {
+        "nifty500_scanned": len(rows),
+        "after_agent_rank": 0,
+        "sized_candidates": 0,
+        "final_picks": 0,
+        "scan_top_n": scan_top_n,
+    }
     if agent_smart:
         from trading.agent_selection import (
             agent_selection_cfg,
@@ -495,6 +582,20 @@ def allocate_budget_picks(
             curated_symbols=curated_set,
             cross_desk_held=cross_desk,
         )
+        if mandatory:
+            ranked_bases = {
+                str(r.get("symbol") or "").upper().replace(".NSE", "") for r in eligible_rows
+            }
+            held_bases = {str(s or "").upper().replace(".NSE", "") for s in held}
+            for row in rows:
+                base = str(row.get("symbol") or "").upper().replace(".NSE", "")
+                if base not in mandatory or base in ranked_bases or base in held_bases:
+                    continue
+                if float(row.get("price") or 0) <= 0:
+                    continue
+                eligible_rows.insert(0, {**row, "mandatory_curated": True})
+                ranked_bases.add(base)
+        funnel["after_agent_rank"] = len(eligible_rows)
     else:
         sel_cfg = None
         ist_mins = None
@@ -504,8 +605,12 @@ def allocate_budget_picks(
             held=held,
             top_n=scan_top_n,
         )
+        funnel["after_agent_rank"] = len(eligible_rows)
     for row in eligible_rows:
         sym = str(row.get("symbol") or "").upper()
+        is_mandatory_row = bool(row.get("mandatory_curated")) or (
+            agent_smart and str(row.get("symbol") or "").upper().replace(".NSE", "") in mandatory
+        )
         scored = _score_screen_row(
             row,
             target_pct=target_pct,
@@ -514,7 +619,7 @@ def allocate_budget_picks(
             include_rag=agent_smart,
         )
         psych_gate = scored.get("psychology_gate") or {}
-        if psych_gate.get("allowed") is False:
+        if psych_gate.get("allowed") is False and not is_mandatory_row:
             continue
         price = float(scored.get("price") or row.get("price") or 0)
         sized = _size_for_budget(
@@ -528,8 +633,10 @@ def allocate_budget_picks(
         )
         if not sized:
             continue
+        sym_base = str(row.get("symbol") or "").upper().replace(".NSE", "")
         if agent_smart and float(sized.get("notional_inr") or 0) < min_notional:
-            continue
+            if sym_base not in mandatory:
+                continue
         row_target = dynamic_target_pct(row, ap_cfg) if ap_cfg.get("dynamic_target_enabled", True) else target_pct
         if agent_smart and sel_cfg:
             edge, edge_reasons, edge_meta = intraday_edge_score(
@@ -546,6 +653,7 @@ def allocate_budget_picks(
             candidates.append({
                 **scored,
                 **sized,
+                "mandatory_curated": is_mandatory_row,
                 "edge_score": edge,
                 "learning_adj": float((row.get("learning_adj") or 0)),
                 "agent_learning": row.get("agent_learning") or {},
@@ -580,8 +688,15 @@ def allocate_budget_picks(
         reverse=True,
     )
 
+    funnel["sized_candidates"] = len(candidates)
+
     if agent_smart and sel_cfg:
-        picks = select_diversified_picks(candidates, max_picks=max_trades, cfg=sel_cfg)
+        n500_slots = max_trades
+        max_mirror = int(ap_cfg.get("agent_max_curated_mirror_picks") or max(1, max_trades // 2))
+        non_mandatory = [c for c in candidates if not c.get("mandatory_curated")]
+        mandatory_cands = [c for c in candidates if c.get("mandatory_curated")]
+        n500_slots = max(1, max_trades - min(len(mandatory_cands), max_mirror))
+        picks = select_diversified_picks(non_mandatory or candidates, max_picks=n500_slots, cfg=sel_cfg)
         from trading.agent_capital_goals import agent_capital_goals, optimize_picks_for_profit_target
 
         goals = agent_capital_goals(cfg)
@@ -593,6 +708,17 @@ def allocate_budget_picks(
                 min_target_inr=min_target,
                 max_picks=max_trades,
             )
+        if mandatory:
+            picks = _merge_mandatory_curated_picks(
+                picks,
+                candidates,
+                mandatory=mandatory,
+                held=held,
+                max_picks=max_trades,
+                max_mandatory=max_mirror,
+            )
+        funnel["n500_expansion_picks"] = len([p for p in picks if not p.get("mandatory_curated")])
+        funnel["curated_mirror_picks"] = len([p for p in picks if p.get("mandatory_curated")])
         budget_left = remaining
         final_picks: list[dict[str, Any]] = []
         for cand in picks:
@@ -616,7 +742,8 @@ def allocate_budget_picks(
                 notional = resized["notional_inr"]
             final_picks.append(cand)
             budget_left = round(budget_left - notional, 2)
-        return final_picks, candidates[:25]
+        funnel["final_picks"] = len(final_picks)
+        return final_picks, candidates[:25], funnel
 
     picks: list[dict[str, Any]] = []
     budget_left = remaining
@@ -643,19 +770,25 @@ def allocate_budget_picks(
         picks.append(cand)
         budget_left = round(budget_left - notional, 2)
 
-    return picks, candidates[:25]
+    funnel["final_picks"] = len(picks)
+    return picks, candidates[:25], funnel
 
 
-def _refresh_prices(picks: list[dict[str, Any]], provider: str = "auto") -> list[dict[str, Any]]:
+def _refresh_prices(
+    picks: list[dict[str, Any]],
+    provider: str = "auto",
+    *,
+    session: Optional[dict[str, Any]] = None,
+) -> list[dict[str, Any]]:
     """Refresh LTP for final picks before execution."""
     out = []
+    limits = _budget_limits(session)
     for pick in picks:
         sym = pick["symbol"]
         try:
             from trading.scheduler import _quote_symbol
             px = float(_quote_symbol(sym, provider))
             if px > 0:
-                limits = _budget_limits(session)
                 sized = _size_for_budget(
                     px,
                     limits=limits,
@@ -771,7 +904,10 @@ def _execute_pick_with_gates(
     if pick_mode in {"auto_pick", "session_agent_auto"}:
         cross = limits.get("cross_desk_symbols") or set()
         sym_base = sym.upper().replace(".NSE", "")
-        if sym in cross or sym_base in {str(s).upper().replace(".NSE", "") for s in cross}:
+        mandatory = {str(s or "").upper().replace(".NSE", "") for s in (limits.get("mandatory_curated_symbols") or set())}
+        is_mandatory = bool(pick.get("mandatory_curated")) or sym_base in mandatory
+        cross_bases = {str(s).upper().replace(".NSE", "") for s in cross}
+        if not is_mandatory and (sym in cross or sym_base in cross_bases):
             rationale = _record_buy_decision(
                 pick=pick,
                 trade={"skipped": True, "reason": "cross_desk_duplicate"},
@@ -794,7 +930,14 @@ def _execute_pick_with_gates(
         from trading.agent_selection import agent_candidate_gate, agent_selection_cfg
 
         row = pick.get("screen_row") or pick
-        allowed, gate_reason = agent_candidate_gate(row, cfg=agent_selection_cfg())
+        mandatory = {str(s or "").upper().replace(".NSE", "") for s in (limits.get("mandatory_curated_symbols") or set())}
+        sym_base = sym.upper().replace(".NSE", "")
+        curated_priority = bool(pick.get("mandatory_curated")) or sym_base in mandatory
+        allowed, gate_reason = agent_candidate_gate(
+            row,
+            cfg=agent_selection_cfg(),
+            curated_priority=curated_priority,
+        )
         if not allowed:
             rationale = _record_buy_decision(
                 pick=pick,
@@ -814,7 +957,15 @@ def _execute_pick_with_gates(
                 "decision_rationale": rationale,
             }
 
-    entry_gate = evaluate_entry_gates(sym, session_id=session_id, pick_mode=pick_mode)
+    curated_mirror = bool(pick.get("mandatory_curated"))
+    mandatory_set = {str(s or "").upper().replace(".NSE", "") for s in (limits.get("mandatory_curated_symbols") or set())}
+    sym_base = sym.upper().replace(".NSE", "")
+    entry_gate = evaluate_entry_gates(
+        sym,
+        session_id=session_id,
+        pick_mode=pick_mode,
+        skip_rag_block=curated_mirror or sym_base in mandatory_set,
+    )
     if not entry_gate.get("allowed"):
         rationale = _record_buy_decision(
             pick=pick,
@@ -1165,6 +1316,41 @@ def _top_up_open_positions(
     return trades
 
 
+def merge_pick_results(*parts: dict[str, Any]) -> dict[str, Any]:
+    """Combine curated-mirror + Nifty expansion cycles for the agent desk."""
+    valid = [p for p in parts if p and isinstance(p, dict)]
+    if not valid:
+        return {}
+    if len(valid) == 1:
+        return valid[0]
+    merged: dict[str, Any] = dict(valid[0])
+    merged["trades"] = []
+    merged["picks"] = []
+    merged["candidates"] = []
+    merged["timing_blocked"] = []
+    seen_picks: set[str] = set()
+    for part in valid:
+        for t in part.get("trades") or []:
+            merged["trades"].append(t)
+        for tb in part.get("timing_blocked") or []:
+            merged["timing_blocked"].append(tb)
+        for c in part.get("candidates") or []:
+            sym = str(c.get("symbol") or "").upper()
+            if sym and sym not in seen_picks:
+                merged["candidates"].append(c)
+        for p in part.get("picks") or []:
+            sym = str(p.get("symbol") or "").upper()
+            if sym and sym not in seen_picks:
+                merged["picks"].append(p)
+                seen_picks.add(sym)
+    merged["affordable_candidates"] = len(merged.get("candidates") or [])
+    merged["allocation_strategy"] = "agent_hybrid_curated_plus_nifty500"
+    funnels = [p.get("filter_funnel") for p in valid if p.get("filter_funnel")]
+    if funnels:
+        merged["filter_funnel"] = funnels[-1]
+    return merged
+
+
 def run_given_stock_trades(
     *,
     execute: bool = False,
@@ -1174,6 +1360,7 @@ def run_given_stock_trades(
     market_provider: str = "auto",
     symbols: Optional[list[str]] = None,
     session: Optional[dict[str, Any]] = None,
+    pick_mode_override: str = "",
 ) -> dict[str, Any]:
     """
     Trade only from user watchlist + desk symbol (no Nifty 500 auto-pick).
@@ -1212,7 +1399,7 @@ def run_given_stock_trades(
         except Exception:
             pass
 
-    picks, candidates = allocate_budget_picks(
+    picks, candidates, _funnel = allocate_budget_picks(
         rows,
         limits=limits,
         max_picks=_resolve_max_picks(max_picks),
@@ -1223,7 +1410,7 @@ def run_given_stock_trades(
     )
 
     if execute and picks:
-        picks = _refresh_prices(picks, market_provider)
+        picks = _refresh_prices(picks, market_provider, session=session)
 
     trades: list[dict[str, Any]] = []
     ms_date = (load_morning_scan() or {}).get("trade_date_ist")
@@ -1239,7 +1426,7 @@ def run_given_stock_trades(
                 session_id = get_active_session_id()
             except Exception:
                 pass
-        pick_mode = "session_curated_list" if session_id else "given_stocks"
+        pick_mode = pick_mode_override or ("session_curated_list" if session_id else "given_stocks")
 
         trades.extend(
             _top_up_open_positions(
@@ -1327,16 +1514,40 @@ def run_autonomous_stock_picks(
     limits = _budget_limits(session)
     rows, universe_meta = _load_nifty500_rows()
 
+    from trading.desk_universe import agent_curated_superset_symbols, symbol_base
+
+    mandatory_syms = agent_curated_superset_symbols(session)
+    if mandatory_syms:
+        have = {symbol_base(str(r.get("symbol") or "")) for r in rows}
+        from trading.scheduler import _analyze_symbol
+
+        for base in mandatory_syms:
+            if base in have:
+                continue
+            sym = f"{base}.NSE" if not base.endswith(".NSE") else base
+            try:
+                analyzed = _analyze_symbol(sym)
+                analyzed["stance"] = str(analyzed.get("composite_stance") or analyzed.get("stance") or "favorable").lower()
+                if analyzed.get("composite_score") is not None:
+                    rows.insert(0, analyzed)
+            except Exception:
+                rows.insert(0, {"symbol": sym, "price": None, "composite_score": 58, "stance": "favorable"})
+
     from trading.agent_learning import enrich_agent_candidate_rows
 
-    rows = enrich_agent_candidate_rows(rows)
+    fast_cycle = bool(execute and ap.get("agent_cycle_fast_enrich", True))
+    rows = enrich_agent_candidate_rows(
+        rows,
+        priority_symbols=mandatory_syms,
+        fast_cycle=fast_cycle,
+    )
 
     if seed_symbol:
         seed = seed_symbol.upper()
         if not any(str(r.get("symbol", "")).upper() == seed for r in rows):
             rows.insert(0, {"symbol": seed, "price": None, "composite_score": 0, "stance": "neutral"})
 
-    picks, candidates = allocate_budget_picks(
+    picks, candidates, filter_funnel = allocate_budget_picks(
         rows,
         limits=limits,
         max_picks=_resolve_max_picks(max_picks),
@@ -1348,7 +1559,7 @@ def run_autonomous_stock_picks(
     )
 
     if execute and picks:
-        picks = _refresh_prices(picks, market_provider)
+        picks = _refresh_prices(picks, market_provider, session=session)
 
     trades: list[dict[str, Any]] = []
     ms_date = (load_morning_scan() or {}).get("trade_date_ist")
@@ -1417,6 +1628,8 @@ def run_autonomous_stock_picks(
         "min_composite": min_score,
         "target_pct": target_pct,
         "allocation_strategy": "agent_smart_edge_diversified",
+        "filter_funnel": filter_funnel,
+        "mandatory_curated_symbols": sorted(mandatory_syms),
         "timing_blocked": timing_blocked,
         "universe_audit": universe_audit,
         "disclaimer": (

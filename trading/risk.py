@@ -134,9 +134,26 @@ def validate_order(
             raise RiskBlocked("symbol_not_allowed", f"{symbol} not in watchlist/whitelist.")
 
     daily = daily_stats()
-    max_orders = int(risk.get("max_orders_per_day") or 5)
-    if side == "buy" and int(daily.get("orders") or 0) >= max_orders:
-        raise RiskBlocked("max_orders", f"Daily order cap reached ({max_orders}).")
+    session_id = str(payload.get("session_id") or "")
+    ap = cfg.get("autopilot") or {}
+    dual = bool(ap.get("dual_mode"))
+    if side == "buy" and dual and session_id:
+        from trading.session_autopilot import _find_session, _load_store, _session_buy_order_count, _session_max_orders
+
+        store = _load_store()
+        sess = _find_session(store, session_id)
+        if sess:
+            desk_cap = _session_max_orders(sess)
+            desk_used = _session_buy_order_count(session_id)
+            if desk_used >= desk_cap:
+                raise RiskBlocked(
+                    "max_orders",
+                    f"Desk order cap reached ({desk_used}/{desk_cap}) for this session.",
+                )
+    else:
+        max_orders = int(risk.get("max_orders_per_day") or 5)
+        if side == "buy" and int(daily.get("orders") or 0) >= max_orders:
+            raise RiskBlocked("max_orders", f"Daily order cap reached ({max_orders}).")
 
     max_loss = float(risk.get("max_intraday_loss_inr") or 5000)
     realized = float(daily.get("realized_pnl_inr") or 0)
@@ -150,8 +167,15 @@ def validate_order(
             mark_trading_halted("profit_target", f"Daily profit target ₹{max_profit} reached.")
             raise RiskBlocked("profit_target", f"Daily profit cap ₹{max_profit} hit — new buys blocked.")
 
-    open_p = open_positions("mis")
-    max_open = int(risk.get("max_open_positions") or 3)
+    if side == "buy" and dual and session_id:
+        from trading.session_autopilot import _find_session, _load_store
+
+        open_p = open_positions("mis", session_id=session_id)
+        sess = _find_session(_load_store(), session_id)
+        max_open = int((sess or {}).get("max_concurrent_picks") or risk.get("max_open_positions") or 3)
+    else:
+        open_p = open_positions("mis")
+        max_open = int(risk.get("max_open_positions") or 3)
     if side == "buy" and len(open_p) >= max_open:
         existing = any(p.get("symbol") == symbol for p in open_p)
         if not existing:
@@ -168,8 +192,17 @@ def validate_order(
             raise RiskBlocked("max_notional", f"Order notional ₹{notional:.0f} exceeds cap ₹{max_pos:.0f}.")
 
         if side == "buy":
-            max_daily = float(risk.get("max_daily_notional_inr") or 100000)
-            used = float(daily.get("buy_notional_inr") or 0)
+            if dual and session_id:
+                from trading.session_autopilot import _find_session, _load_store, _session_buy_notional
+
+                store = _load_store()
+                sess = _find_session(store, session_id)
+                caps = (sess or {}).get("caps") or {}
+                max_daily = float(caps.get("max_daily_notional_inr") or risk.get("max_daily_notional_inr") or 100000)
+                used = _session_buy_notional(session_id)
+            else:
+                max_daily = float(risk.get("max_daily_notional_inr") or 100000)
+                used = float(daily.get("buy_notional_inr") or 0)
             if used + notional > max_daily:
                 raise RiskBlocked(
                     "max_daily_notional",
