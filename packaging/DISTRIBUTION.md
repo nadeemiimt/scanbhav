@@ -11,10 +11,13 @@ PyInstaller builds are **platform-native**: Mac on macOS, Windows on Windows (or
 ```bash
 cd stock-analyzer-starter
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+export SCAN_BHAV_INSTALL_PACKAGING=1
+./scripts/install-python-deps.sh
 chmod +x scripts/build-release.sh
 ./scripts/build-release.sh
 ```
+
+> Broker note: `fyers-apiv3` pins old `requests`/`aiohttp` that conflict with `growwapi`. The install script loads FYERS with `--no-deps` so Mac/Windows CI can resolve.
 
 **Outputs** (`dist/release/`):
 
@@ -31,7 +34,8 @@ In PowerShell (from project root on a Windows machine):
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+$env:SCAN_BHAV_INSTALL_PACKAGING = "1"
+.\scripts\install-python-deps.ps1
 .\scripts\build-release.ps1
 ```
 

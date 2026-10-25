@@ -1,0 +1,11 @@
+# Broker SDKs (optional at runtime — paper/stub mode needs none of these).
+#
+# growwapi and fyers-apiv3 cannot be fully resolved together:
+#   fyers pins requests==2.31.0 and aiohttp==3.9.3
+#   groww  needs requests>=2.32.3 and aiohttp>=3.11.18
+# Use scripts/install-python-deps.sh (or the CI steps) which installs
+# kiteconnect + growwapi normally, then fyers-apiv3 with --no-deps.
+
+kiteconnect>=5.0
+growwapi>=1.5
+fyers-apiv3>=3.1.14

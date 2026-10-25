@@ -20,6 +20,8 @@ cd stock-analyzer-starter
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+# Broker SDKs (Zerodha / Groww / FYERS) — use the safe installer (FYERS conflicts with Groww pins):
+# ./scripts/install-python-deps.sh
 ```
 
 Create your private configuration file and add your own Alpha Vantage key. `.env` is ignored by Git and must not be shared:

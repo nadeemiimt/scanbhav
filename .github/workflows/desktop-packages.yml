@@ -10,6 +10,7 @@ on:
 
 env:
   SCAN_BHAV_VERSION: "0.6.0"
+  SCAN_BHAV_INSTALL_PACKAGING: "1"
 
 jobs:
   mac:
@@ -26,9 +27,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install Python deps
         run: |
-          python -m pip install -U pip
-          pip install -r requirements.txt
-          pip install -r requirements-packaging.txt
+          chmod +x scripts/install-python-deps.sh
+          ./scripts/install-python-deps.sh
       - name: Build release
         run: |
           chmod +x scripts/build-release.sh
@@ -40,6 +40,7 @@ jobs:
             dist/release/ScanBhav.app
             dist/release/ScanBhav-macOS-*.dmg
             dist/release/ScanBhav-macOS-*.zip
+          if-no-files-found: error
 
   windows:
     runs-on: windows-latest
@@ -54,10 +55,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - name: Install Python deps
-        run: |
-          python -m pip install -U pip
-          pip install -r requirements.txt
-          pip install -r requirements-packaging.txt
+        shell: pwsh
+        run: .\scripts\install-python-deps.ps1
       - name: Build release
         shell: pwsh
         run: .\scripts\build-release.ps1
@@ -67,3 +66,4 @@ jobs:
           path: |
             dist/release/ScanBhav
             dist/release/ScanBhav-Windows-*.zip
+          if-no-files-found: error
