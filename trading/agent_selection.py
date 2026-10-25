@@ -137,6 +137,16 @@ def intraday_edge_score(
         score += min(8.0, (float(rvol) - 1.0) * 5.0)
         reasons.append(f"rvol_{float(rvol):.1f}")
 
+    ltp_vel = row.get("ltp_velocity_pct")
+    if isinstance(ltp_vel, (int, float)):
+        lv = float(ltp_vel)
+        if lv >= 0.12:
+            score += min(7.0, lv * 10.0)
+            reasons.append(f"ltp_momo_{lv:.2f}%")
+        elif lv <= -0.18:
+            score -= 5.0
+            reasons.append(f"ltp_weak_{lv:.2f}%")
+
     qs = row.get("quality_score")
     if isinstance(qs, (int, float)) and float(qs) >= max(cfg["min_quality_score"], 45):
         score += 3.0
@@ -264,6 +274,8 @@ def rank_rows_for_agent(
     ist_mins = ist_mins if ist_mins is not None else ist_minutes_now()
     curated = {str(s or "").upper().replace(".NSE", "") for s in (curated_symbols or set())}
     cross = {str(s or "").upper().replace(".NSE", "") for s in (cross_desk_held or set())}
+    ap = load_trading_config().get("autopilot") or {}
+    allow_overlap = bool(ap.get("agent_dual_allow_curated_overlap", False))
     ranked: list[tuple[float, dict[str, Any]]] = []
 
     for row in rows:
@@ -272,7 +284,7 @@ def rank_rows_for_agent(
         if not sym or sym in held:
             continue
         is_curated = sym_base in curated
-        if sym_base in cross and not is_curated:
+        if sym_base in cross and (not is_curated or not allow_overlap):
             continue
         composite = float(row.get("composite_score") or 0)
         stance = str(row.get("stance") or "").lower()

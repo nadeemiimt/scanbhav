@@ -37,14 +37,21 @@ def _session_symbols(session: Optional[dict[str, Any]], *, from_positions: list[
 
 
 def compute_desk_gap(
-    sessions: list[dict[str, Any]],
+    sessions: list[dict[str, Any]] | dict[str, Any],
     *,
     positions: Optional[list[dict[str, Any]]] = None,
     last_agent_pick: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
-    """Live gap metrics for dual desk (agent should be superset of curated)."""
+    """Live gap metrics for dual desk (informational; agent may run independently)."""
     from trading.paper_ledger import open_positions
 
+    if isinstance(sessions, dict):
+        try:
+            from trading.session_autopilot import _active_sessions, _hydrate_session
+
+            sessions = [_hydrate_session(s) for s in _active_sessions(sessions)]
+        except Exception:
+            sessions = []
     positions = positions if positions is not None else open_positions("mis")
     agent, curated = _desk_by_mode(sessions)
 

@@ -1,3 +1,5 @@
+import { useMemo, useState } from 'react'
+
 const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
 
 function PdfIcon() {
@@ -25,7 +27,57 @@ function modeLabel(pickMode) {
   return pickMode || 'Session'
 }
 
-export function SessionReportsPanel({ sessions = [], selectedId = '', busy = false, onSelect, onDownloadPdf }) {
+export function SessionReportsPanel({
+  sessions = [],
+  selectedId = '',
+  busy = false,
+  onSelect,
+  onDownloadPdf,
+  onClear,
+}) {
+  const [listOpen, setListOpen] = useState(true)
+  const [expandedIds, setExpandedIds] = useState(() => new Set())
+  const [checked, setChecked] = useState(() => new Set())
+
+  const ids = useMemo(() => sessions.map(row => row.session_id).filter(Boolean), [sessions])
+  const checkedCount = checked.size
+  const allChecked = ids.length > 0 && ids.every(id => checked.has(id))
+
+  function toggleChecked(sessionId, next) {
+    setChecked(prev => {
+      const out = new Set(prev)
+      if (next) out.add(sessionId)
+      else out.delete(sessionId)
+      return out
+    })
+  }
+
+  function toggleAll(next) {
+    setChecked(next ? new Set(ids) : new Set())
+  }
+
+  function toggleExpanded(sessionId) {
+    setExpandedIds(prev => {
+      const out = new Set(prev)
+      if (out.has(sessionId)) out.delete(sessionId)
+      else out.add(sessionId)
+      return out
+    })
+  }
+
+  async function clearSelected() {
+    if (!checkedCount || !onClear) return
+    await onClear({ sessionIds: [...checked] })
+    setChecked(new Set())
+  }
+
+  async function clearAll() {
+    if (!sessions.length || !onClear) return
+    await onClear({ clearAll: true })
+    setChecked(new Set())
+    setExpandedIds(new Set())
+  }
+
   if (!sessions.length) {
     return (
       <section className="panel session-reports-panel">
@@ -47,79 +99,145 @@ export function SessionReportsPanel({ sessions = [], selectedId = '', busy = fal
           <p className="eyebrow">SESSION REPORTS</p>
           <h3>Past autopilot sessions</h3>
         </div>
-        <span className="subtle">{sessions.length} session(s)</span>
+        <div className="session-report-toolbar">
+          <span className="subtle">{sessions.length} session(s)</span>
+          <button
+            type="button"
+            className="ghost"
+            disabled={!!busy}
+            onClick={() => setListOpen(v => !v)}
+            aria-expanded={listOpen}
+          >
+            {listOpen ? 'Collapse' : 'Expand'}
+          </button>
+        </div>
       </div>
       <p className="subtle">
-        Each card shows net P&amp;L, gross profit vs loss, session window, and lessons. Click a row to open the full report.
+        Cards stay compact until you expand them. Select rows to clear, or clear all history. Active desks are never removed.
       </p>
-      <ul className="session-report-list">
-        {sessions.map(row => {
-          const net = row.realized_pnl_inr ?? 0
-          const profit = row.gross_profit_inr ?? 0
-          const loss = row.gross_loss_inr ?? 0
-          const isSelected = selectedId === row.session_id
-          return (
-            <li key={row.session_id} className={`session-report-card${isSelected ? ' is-selected' : ''}`}>
-              <button
-                type="button"
-                className="session-report-main"
-                disabled={!!busy}
-                onClick={() => onSelect?.(row.session_id)}
-              >
-                <div className="session-report-top">
-                  <div>
-                    <strong>{row.trade_date_ist || '—'}</strong>
-                    <span className="subtle"> · {modeLabel(row.pick_mode)}</span>
+      {listOpen && (
+        <>
+          <div className="session-report-actions">
+            <label className="refresh-toggle">
+              <input
+                type="checkbox"
+                checked={allChecked}
+                disabled={!!busy || !ids.length}
+                onChange={e => toggleAll(e.target.checked)}
+              />
+              Select all
+            </label>
+            <button
+              type="button"
+              className="ghost"
+              disabled={!!busy || checkedCount === 0}
+              onClick={clearSelected}
+            >
+              Clear selected ({checkedCount})
+            </button>
+            <button
+              type="button"
+              className="ghost"
+              disabled={!!busy}
+              onClick={clearAll}
+            >
+              Clear all
+            </button>
+          </div>
+          <ul className="session-report-list">
+            {sessions.map(row => {
+              const net = row.realized_pnl_inr ?? 0
+              const profit = row.gross_profit_inr ?? 0
+              const loss = row.gross_loss_inr ?? 0
+              const isSelected = selectedId === row.session_id
+              const isExpanded = expandedIds.has(row.session_id)
+              const isChecked = checked.has(row.session_id)
+              return (
+                <li
+                  key={row.session_id}
+                  className={`session-report-card${isSelected ? ' is-selected' : ''}${isExpanded ? ' is-expanded' : ' is-collapsed'}`}
+                >
+                  <div className="session-report-check">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${row.session_id}`}
+                      checked={isChecked}
+                      disabled={!!busy}
+                      onChange={e => toggleChecked(row.session_id, e.target.checked)}
+                    />
                   </div>
-                  <span className={`session-report-net ${net >= 0 ? 'up' : 'down'}`}>
-                    {money.format(net)}
-                  </span>
-                </div>
-                <div className="session-report-highlights">
-                  <span className="up">+{money.format(profit)} profit</span>
-                  <span className="down">−{money.format(loss)} loss</span>
-                  <span className="subtle">
-                    {row.wins ?? 0}W / {row.losses ?? 0}L · {row.closed_trades ?? 0} closes
-                  </span>
-                </div>
-                <div className="session-report-meta subtle">
-                  <span>{row.started_at_ist || '—'}</span>
-                  <span> → </span>
-                  <span>{row.stopped_at_ist || '—'}</span>
-                  {row.cycle_count > 0 && <span> · {row.cycle_count} cycles</span>}
-                </div>
-                <code className="session-report-id">{row.session_id}</code>
-                {row.postmortem_preview && (
-                  <p className="session-report-preview">{row.postmortem_preview}</p>
-                )}
-                {(row.best_symbol || row.worst_symbol) && (
-                  <p className="session-report-symbols subtle">
-                    {row.best_symbol && (
-                      <>Best <b>{row.best_symbol}</b> {money.format(row.best_pnl_inr || 0)}</>
+                  <button
+                    type="button"
+                    className="session-report-main"
+                    disabled={!!busy}
+                    onClick={() => {
+                      toggleExpanded(row.session_id)
+                      onSelect?.(row.session_id)
+                    }}
+                  >
+                    <div className="session-report-top">
+                      <div>
+                        <strong>{row.trade_date_ist || '—'}</strong>
+                        <span className="subtle"> · {modeLabel(row.pick_mode)}</span>
+                      </div>
+                      <span className={`session-report-net ${net >= 0 ? 'up' : 'down'}`}>
+                        {money.format(net)}
+                      </span>
+                    </div>
+                    <div className="session-report-highlights">
+                      <span className="up">+{money.format(profit)} profit</span>
+                      <span className="down">−{money.format(loss)} loss</span>
+                      <span className="subtle">
+                        {row.wins ?? 0}W / {row.losses ?? 0}L · {row.closed_trades ?? 0} closes
+                      </span>
+                    </div>
+                    {isExpanded && (
+                      <>
+                        <div className="session-report-meta subtle">
+                          <span>{row.started_at_ist || '—'}</span>
+                          <span> → </span>
+                          <span>{row.stopped_at_ist || '—'}</span>
+                          {row.cycle_count > 0 && <span> · {row.cycle_count} cycles</span>}
+                        </div>
+                        <code className="session-report-id">{row.session_id}</code>
+                        {row.postmortem_preview && (
+                          <p className="session-report-preview">{row.postmortem_preview}</p>
+                        )}
+                        {(row.best_symbol || row.worst_symbol) && (
+                          <p className="session-report-symbols subtle">
+                            {row.best_symbol && (
+                              <>Best <b>{row.best_symbol}</b> {money.format(row.best_pnl_inr || 0)}</>
+                            )}
+                            {row.worst_symbol && row.worst_symbol !== row.best_symbol && (
+                              <> · Worst <b>{row.worst_symbol}</b> {money.format(row.worst_pnl_inr || 0)}</>
+                            )}
+                          </p>
+                        )}
+                      </>
                     )}
-                    {row.worst_symbol && row.worst_symbol !== row.best_symbol && (
-                      <> · Worst <b>{row.worst_symbol}</b> {money.format(row.worst_pnl_inr || 0)}</>
-                    )}
-                  </p>
-                )}
-              </button>
-              <button
-                type="button"
-                className="ghost session-report-pdf-btn"
-                title="Download PDF report"
-                disabled={!!busy}
-                onClick={e => {
-                  e.stopPropagation()
-                  onDownloadPdf?.(row.session_id)
-                }}
-              >
-                <PdfIcon />
-                <span>PDF</span>
-              </button>
-            </li>
-          )
-        })}
-      </ul>
+                    <span className="session-report-expand-hint subtle">
+                      {isExpanded ? 'Click to collapse' : 'Click to expand details'}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost session-report-pdf-btn"
+                    title="Download PDF report"
+                    disabled={!!busy}
+                    onClick={e => {
+                      e.stopPropagation()
+                      onDownloadPdf?.(row.session_id)
+                    }}
+                  >
+                    <PdfIcon />
+                    <span>PDF</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
     </section>
   )
 }

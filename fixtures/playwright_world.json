@@ -1,0 +1,98 @@
+{
+  "fixture": "playwright",
+  "as_of": "2026-09-30",
+  "regime": "range",
+  "note": "Fixed world for tests. No live prices, news, or model calls.",
+  "prices": {
+    "RELIANCE.NSE": [
+      {"date": "2026-09-28", "close": 2920.0},
+      {"date": "2026-09-29", "close": 2935.0},
+      {"date": "2026-09-30", "close": 2950.5}
+    ],
+    "TCS.NSE": [
+      {"date": "2026-09-28", "close": 4100.0},
+      {"date": "2026-09-29", "close": 4088.0},
+      {"date": "2026-09-30", "close": 4075.0}
+    ],
+    "TINY.NSE": [
+      {"date": "2026-09-28", "close": 42.0},
+      {"date": "2026-09-29", "close": 41.5},
+      {"date": "2026-09-30", "close": 41.0}
+    ]
+  },
+  "news": {
+    "RELIANCE.NSE": {
+      "news_score": 78,
+      "headlines": [
+        {
+          "title": "Reliance wins a firm export order",
+          "source": "dummy-wire",
+          "published": "2026-09-29",
+          "tag": "earnings_corporate",
+          "sentiment": "positive"
+        }
+      ]
+    },
+    "TCS.NSE": {
+      "news_score": 55,
+      "headlines": [
+        {
+          "title": "TCS guides steady services demand",
+          "source": "dummy-wire",
+          "published": "2026-09-28",
+          "tag": "earnings_corporate",
+          "sentiment": "neutral"
+        }
+      ]
+    },
+    "TINY.NSE": {
+      "news_score": 40,
+      "headlines": []
+    }
+  },
+  "technicals": {
+    "RELIANCE.NSE": {
+      "composite_score": 72,
+      "stance": "favorable",
+      "rsi_14": 48,
+      "triggers_fired": ["trigger_price_above_sma50"]
+    },
+    "TCS.NSE": {
+      "composite_score": 61,
+      "stance": "favorable",
+      "rsi_14": 57,
+      "triggers_fired": ["trigger_ema9_above_ema21"]
+    },
+    "TINY.NSE": {
+      "composite_score": 41,
+      "stance": "neutral",
+      "rsi_14": 28,
+      "triggers_fired": []
+    }
+  },
+  "order_book": {
+    "RELIANCE.NSE": {
+      "status": "Firm",
+      "quality_score": 16,
+      "trigger_score": 9,
+      "firm_order_to_revenue": 1.2,
+      "red_flags": []
+    },
+    "TCS.NSE": {
+      "status": "L1/LoI only",
+      "quality_score": 12,
+      "trigger_score": 6,
+      "firm_order_to_revenue": 0.4,
+      "red_flags": []
+    }
+  },
+  "backtest": {
+    "mode": "walk_forward",
+    "trigger": "trigger_price_above_sma50",
+    "results": [
+      {"symbol": "RELIANCE.NSE", "n_trades": 12, "win_rate": 0.58, "expectancy_pct": 0.42},
+      {"symbol": "TCS.NSE", "n_trades": 10, "win_rate": 0.5, "expectancy_pct": 0.05},
+      {"symbol": "TINY.NSE", "n_trades": 4, "win_rate": 0.25, "expectancy_pct": -0.8}
+    ]
+  }
+}

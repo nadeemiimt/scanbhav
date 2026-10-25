@@ -142,10 +142,13 @@ def agent_learning_score(
         return 0.0, meta, reasons
 
     total = 0.0
-    curated = {_symbol_base(s) for s in (curated_symbols or set())}
-    if sym_base in curated or sym in curated:
-        total += cfg["curated_overlap_boost"]
-        reasons.append("curated_overlap")
+    from trading.desk_universe import agent_independent_desk
+
+    if not agent_independent_desk(None):
+        curated = {_symbol_base(s) for s in (curated_symbols or set())}
+        if sym_base in curated or sym in curated:
+            total += cfg["curated_overlap_boost"]
+            reasons.append("curated_overlap")
 
     timing_adj, timing_reasons = timing_profile_score(sym)
     total += timing_adj
@@ -229,6 +232,9 @@ def enrich_agent_candidate_rows(
         )
         if not needs:
             return
+        if fast_cycle and row.get("ltp_fresh") and float(row.get("price") or 0) > 0:
+            if row.get("atr_pct") is not None and float(row.get("composite_score") or 0) > 0:
+                return
         try:
             from trading.scheduler import _analyze_symbol
 

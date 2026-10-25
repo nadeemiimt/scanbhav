@@ -15,7 +15,10 @@ hiddenimports += collect_submodules("trading")
 hiddenimports += collect_submodules("quant_layer")
 hiddenimports += collect_submodules("brokers")
 hiddenimports += collect_submodules("analysis")
+hiddenimports += collect_submodules("integrations")
 hiddenimports += [
+    "fixtures",
+    "fixtures.playwright_recommend",
     "api",
     "runtime_paths",
     "uvicorn",

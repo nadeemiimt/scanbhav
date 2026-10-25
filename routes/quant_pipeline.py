@@ -101,6 +101,22 @@ def quant_shortlist_cached() -> dict[str, Any]:
     return cached
 
 
+@router.get("/api/quant/decision")
+def quant_decision(limit: int = Query(8, ge=1, le=20)) -> dict[str, Any]:
+    """Cache-only review list: technical shortlist + order-book watchlist."""
+    from quant_layer.decision_desk import build_decision_desk
+
+    return build_decision_desk(limit=limit)
+
+
+@router.post("/api/quant/order-book/screen")
+def quant_order_book_screen() -> dict[str, Any]:
+    """Agent 10 — score stored order tables. Does not place trades."""
+    from quant_layer.order_book_screener import screen_stored
+
+    return screen_stored()
+
+
 @router.get("/api/quant/digest")
 def quant_digest() -> dict[str, Any]:
     """Latest composite report snapshot for UI."""

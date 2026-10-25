@@ -50,6 +50,16 @@ def save_token(broker: str, access_token: str, **extra: Any) -> dict[str, Any]:
     return data[broker.lower()]
 
 
+def clear_token(broker: str) -> dict[str, Any]:
+    data = _load_all()
+    key = broker.lower()
+    existed = key in data
+    if existed:
+        data.pop(key, None)
+        _save_all(data)
+    return {"ok": True, "broker": key, "cleared": existed}
+
+
 def token_meta(broker: str) -> dict[str, Any]:
     row = _load_all().get(broker.lower()) or {}
     if not row:

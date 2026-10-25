@@ -48,6 +48,24 @@ def resolve_access_token(broker: str, env: BrokerEnv | None = None) -> str:
     return ""
 
 
+def _ui_or_env(*names: str) -> str:
+    """Env wins; otherwise a key saved from Settings → API keys."""
+    for name in names:
+        val = setting(name, "").strip()
+        if val:
+            return val
+    try:
+        from integrations.keys import get_secret
+
+        for name in names:
+            val = get_secret(name.lower()).strip()
+            if val:
+                return val
+    except Exception:
+        pass
+    return ""
+
+
 def load_broker_env() -> BrokerEnv:
     return BrokerEnv(
         default_broker=setting("BROKER_DEFAULT", "stub").lower(),
@@ -55,14 +73,14 @@ def load_broker_env() -> BrokerEnv:
         gateway_secret=setting("BROKER_GATEWAY_SECRET", ""),
         static_ip_note=setting("BROKER_STATIC_IP", "").strip(),
         deployment_mode=setting("BROKER_DEPLOYMENT_MODE", "local").lower(),
-        zerodha_api_key=setting("ZERODHA_API_KEY", ""),
-        zerodha_api_secret=setting("ZERODHA_API_SECRET", ""),
+        zerodha_api_key=_ui_or_env("ZERODHA_API_KEY", "zerodha_api_key"),
+        zerodha_api_secret=_ui_or_env("ZERODHA_API_SECRET", "zerodha_api_secret"),
         zerodha_access_token=setting("ZERODHA_ACCESS_TOKEN", ""),
-        groww_api_key=setting("GROWW_API_KEY", ""),
-        groww_api_secret=setting("GROWW_API_SECRET", ""),
+        groww_api_key=_ui_or_env("GROWW_API_KEY", "groww_api_key"),
+        groww_api_secret=_ui_or_env("GROWW_API_SECRET", "groww_api_secret"),
         groww_access_token=setting("GROWW_ACCESS_TOKEN", ""),
-        fyers_app_id=setting("FYERS_APP_ID", ""),
-        fyers_secret=setting("FYERS_SECRET", ""),
+        fyers_app_id=_ui_or_env("FYERS_APP_ID", "fyers_app_id"),
+        fyers_secret=_ui_or_env("FYERS_SECRET", "fyers_secret"),
         fyers_access_token=setting("FYERS_ACCESS_TOKEN", ""),
     )
 

@@ -34,6 +34,9 @@ def _register(df: pd.DataFrame, name: str, series: pd.Series) -> None:
 def compute_triggers(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
+    # Indicator frame skips SMA/RSI when history is too short (<30 bars).
+    if "sma_50" not in df.columns or "rsi_14" not in df.columns:
+        return df
 
     c = df["close_adj"]
     _register(df, "golden_cross", confirmed_cross(df["sma_50"], df["sma_200"], hold_days=3))

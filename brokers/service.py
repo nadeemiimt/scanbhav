@@ -137,7 +137,8 @@ def get_live_quotes(broker_id: str, symbols: list[str]) -> dict[str, Any]:
 
             ap = load_trading_config().get("autopilot") or {}
             if ap.get("ltp_stream_enabled", True):
-                cached = _quotes_from_cache(symbols)
+                max_age = float(ap.get("universe_ltp_max_age_seconds") or 30)
+                cached = _quotes_from_cache(symbols, max_age_seconds=max_age)
                 missing = [s for s in symbols if s.strip().upper() not in cached["quotes"]]
                 if not missing:
                     return cached

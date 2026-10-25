@@ -687,6 +687,96 @@ body {
 .session-progress-feed-item.level-skip {
   border-left: 3px solid var(--down, #f07178);
 }
+.horizon-picks-panel {
+  margin-bottom: 16px;
+}
+.horizon-pick-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+.horizon-pick-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.horizon-pick-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.horizon-pick-list li {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.horizon-pick-list li > span {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 12px;
+}
+.verdict-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+.daywise-prediction table {
+  width: 100%;
+  font-size: 13px;
+}
+.backtest-progress {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(124, 240, 255, 0.04);
+}
+.backtest-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.backtest-progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.backtest-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6d7cff, #7cf0ff 55%, #c084fc);
+  transition: width 0.25s ease;
+}
+.backtest-progress-msg {
+  margin: 8px 0 0;
+}
+.backtest-progress-log {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  max-height: 9rem;
+  overflow: auto;
+}
+.session-report-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.session-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
 .session-report-list {
   display: grid;
   gap: 10px;
@@ -696,13 +786,30 @@ body {
 }
 .session-report-card {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   gap: 8px;
   align-items: stretch;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--panel-2);
   overflow: hidden;
+}
+.session-report-check {
+  display: flex;
+  align-items: flex-start;
+  padding: 14px 0 14px 12px;
+}
+.session-report-card.is-collapsed .session-report-preview,
+.session-report-card.is-collapsed .session-report-symbols,
+.session-report-card.is-collapsed .session-report-id,
+.session-report-card.is-collapsed .session-report-meta {
+  display: none;
+}
+.session-report-expand-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
 }
 .session-report-card.is-selected {
   border-color: rgba(232, 184, 74, 0.55);
@@ -4826,6 +4933,10 @@ td.leftish { text-align: left; white-space: normal; max-width: 360px; }
   padding: 0;
 }
 .settings-hint { margin: 0; font-size: 12px; }
+.token-guide { margin: 0 0 14px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--border, #334) 80%, transparent); border-radius: 8px; }
+.token-guide-block { margin-top: 8px; }
+.token-guide-block .eyebrow { margin: 0 0 4px; letter-spacing: 0.06em; font-size: 11px; opacity: 0.8; }
+.token-guide-block ul { margin: 0; padding-left: 1.1rem; }
 .settings-guide-btn { align-self: start; }
 .settings-actions-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .settings-modal-foot {

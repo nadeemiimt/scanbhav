@@ -69,6 +69,17 @@ def ta_horizons() -> dict[str, Any]:
     return {"horizons": HORIZONS}
 
 
+@router.get("/api/ta/horizon-picks")
+def ta_horizon_picks(
+    top_n: int = Query(8, ge=3, le=25),
+    refresh: bool = Query(False, description="Rebuild from screen / local cache"),
+) -> dict[str, Any]:
+    """Auto top buy / plan-sell names for 7d, 15d, 30d, 6m, 1y."""
+    from horizon_picks import build_horizon_picks
+
+    return build_horizon_picks(top_n=top_n, force_backfill=refresh)
+
+
 @router.get("/api/ta/reference")
 def ta_reference() -> dict[str, Any]:
     """Full indicator catalog + desk section guide for the Method / Reference page."""
@@ -239,7 +250,7 @@ def ta_analyze(request: TaAnalyzeRequest) -> dict[str, Any]:
             plan_15d = None
             plan_session = None
             plan_7d = None
-        return {
+        payload = {
             "symbol": request.symbol.upper(),
             "quote": quote,
             "technicals": tech,
@@ -268,6 +279,13 @@ def ta_analyze(request: TaAnalyzeRequest) -> dict[str, Any]:
                 "Options PCR/OI", "FII/DII flows", "Macro FX/commodities", "Market regime",
             ],
         }
+        try:
+            from horizon_picks import analysis_verdict_summary
+
+            payload["verdict_summary"] = analysis_verdict_summary(payload)
+        except Exception:
+            payload["verdict_summary"] = None
+        return payload
     except (RuntimeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:

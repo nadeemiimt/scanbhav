@@ -45,6 +45,13 @@ def trading_backtest_agent_run(force: bool = False) -> dict[str, Any]:
     return run_backtest_learning_job(force=force)
 
 
+@router.post("/api/trading/backtest-agent/run-random")
+def trading_backtest_agent_run_random(force: bool = False, count: Optional[int] = None) -> dict[str, Any]:
+    from trading.backtest_agent import run_backtest_random_exploration_job
+
+    return run_backtest_random_exploration_job(force=force, count=count)
+
+
 @router.get("/api/trading/profit-profile")
 def trading_profit_profile_get() -> dict[str, Any]:
     from trading.profit_profiles import profit_profile_status
@@ -411,6 +418,22 @@ def trading_session_reports(limit: int = 50) -> dict[str, Any]:
 
     cards = list_session_report_cards(limit=min(max(1, limit), 100))
     return {"sessions": cards, "count": len(cards)}
+
+
+@router.post("/api/trading/session/reports/clear")
+def trading_session_reports_clear(body: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    """Clear selected past sessions, or all history. Active desks are kept."""
+    from trading.session_report import delete_session_history
+
+    opts = body or {}
+    clear_all = bool(opts.get("clear_all"))
+    raw_ids = opts.get("session_ids") or []
+    if not isinstance(raw_ids, list):
+        raw_ids = []
+    session_ids = [str(item).strip() for item in raw_ids if str(item).strip()]
+    if not clear_all and not session_ids:
+        raise HTTPException(status_code=400, detail="Pass session_ids or clear_all=true")
+    return delete_session_history(session_ids=session_ids, clear_all=clear_all)
 
 
 @router.get("/api/trading/session/report/pdf")

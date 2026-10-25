@@ -115,17 +115,26 @@ def _budget_limits(session: Optional[dict[str, Any]] = None) -> dict[str, Any]:
 
             used_notional = _session_buy_notional(session_id)
             held = _session_open_symbols(session_id)
-            cross_desk = cross_desk_held_symbols(session_id)
+            from trading.desk_universe import (
+                agent_curated_superset_symbols,
+                agent_independent_desk,
+                filter_cross_desk_for_agent,
+            )
+
+            independent = agent_independent_desk(session)
+            if independent:
+                cross_desk = set()
+                mandatory_curated = set()
+            else:
+                cross_desk = cross_desk_held_symbols(session_id)
+                cross_desk = filter_cross_desk_for_agent(cross_desk, session=session)
+                mandatory_curated = agent_curated_superset_symbols(session)
             ap_dual = load_trading_config().get("autopilot") or {}
             if ap_dual.get("dual_mode"):
                 orders_left = max(0, _session_max_orders(session) - _session_buy_order_count(session_id))
             else:
                 max_orders = int(risk.get("max_orders_per_day") or 5)
                 orders_left = max(0, max_orders - int(daily.get("orders") or 0))
-            from trading.desk_universe import agent_curated_superset_symbols, filter_cross_desk_for_agent
-
-            cross_desk = filter_cross_desk_for_agent(cross_desk, session=session)
-            mandatory_curated = agent_curated_superset_symbols(session)
         except Exception:
             held = {p.get("symbol") for p in open_p}
             used_notional = float(daily.get("buy_notional_inr") or 0)
@@ -451,6 +460,34 @@ def _size_for_budget(
     return {"quantity": qty, "notional_inr": notional, "price": price, "sizing_method": "max_cap"}
 
 
+def _filter_n500_expansion_picks(
+    picks: list[dict[str, Any]],
+    ap_cfg: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Drop weak Nifty-only picks so Auto desk does not bleed vs Curated."""
+    require_bt = bool(ap_cfg.get("agent_n500_requires_positive_backtest", True))
+    min_edge = float(ap_cfg.get("agent_n500_min_edge_score") or 42.0)
+    if not require_bt and min_edge <= 0:
+        return picks
+    from trading.backtest_agent import backtest_score_adjustment
+
+    kept: list[dict[str, Any]] = []
+    for pick in picks:
+        if pick.get("mandatory_curated"):
+            kept.append(pick)
+            continue
+        sym = str(pick.get("symbol") or "")
+        edge = float(pick.get("edge_score") or 0)
+        if edge < min_edge:
+            continue
+        if require_bt:
+            adj, _meta = backtest_score_adjustment(sym)
+            if adj < 0:
+                continue
+        kept.append(pick)
+    return kept
+
+
 def _merge_mandatory_curated_picks(
     picks: list[dict[str, Any]],
     candidates: list[dict[str, Any]],
@@ -535,14 +572,29 @@ def allocate_budget_picks(
     curated_set: set[str] = set()
     mandatory: set[str] = set()
     if agent_smart:
-        mandatory = {str(s or "").upper().replace(".NSE", "") for s in (limits.get("mandatory_curated_symbols") or set())}
-        curated_set = mandatory | {
-            str(s or "").upper().replace(".NSE", "")
-            for s in (
-                (ap_cfg.get("curated_symbols") or [])
-                + list(cfg.get("watchlist") or [])
-            )
-        }
+        from trading.desk_universe import agent_independent_desk
+
+        session_for_mode = None
+        if limits.get("session_id"):
+            try:
+                from trading.session_autopilot import _load_store, _active_sessions
+
+                sid = str(limits.get("session_id") or "")
+                for row in _active_sessions(_load_store()):
+                    if str(row.get("id") or "") == sid:
+                        session_for_mode = row
+                        break
+            except Exception:
+                pass
+        if not agent_independent_desk(session_for_mode):
+            mandatory = {str(s or "").upper().replace(".NSE", "") for s in (limits.get("mandatory_curated_symbols") or set())}
+            curated_set = mandatory | {
+                str(s or "").upper().replace(".NSE", "")
+                for s in (
+                    (ap_cfg.get("curated_symbols") or [])
+                    + list(cfg.get("watchlist") or [])
+                )
+            }
     max_trades = min(max(1, max_picks), slots, orders_left)
     empty_funnel = {"nifty500_scanned": len(rows), "after_agent_rank": 0, "sized_candidates": 0, "final_picks": 0}
     if max_trades <= 0 or remaining <= 0 or limits.get("halted"):
@@ -697,6 +749,7 @@ def allocate_budget_picks(
         mandatory_cands = [c for c in candidates if c.get("mandatory_curated")]
         n500_slots = max(1, max_trades - min(len(mandatory_cands), max_mirror))
         picks = select_diversified_picks(non_mandatory or candidates, max_picks=n500_slots, cfg=sel_cfg)
+        picks = _filter_n500_expansion_picks(picks, ap_cfg)
         from trading.agent_capital_goals import agent_capital_goals, optimize_picks_for_profit_target
 
         goals = agent_capital_goals(cfg)
@@ -902,29 +955,35 @@ def _execute_pick_with_gates(
         }
 
     if pick_mode in {"auto_pick", "session_agent_auto"}:
-        cross = limits.get("cross_desk_symbols") or set()
-        sym_base = sym.upper().replace(".NSE", "")
-        mandatory = {str(s or "").upper().replace(".NSE", "") for s in (limits.get("mandatory_curated_symbols") or set())}
-        is_mandatory = bool(pick.get("mandatory_curated")) or sym_base in mandatory
-        cross_bases = {str(s).upper().replace(".NSE", "") for s in cross}
-        if not is_mandatory and (sym in cross or sym_base in cross_bases):
-            rationale = _record_buy_decision(
-                pick=pick,
-                trade={"skipped": True, "reason": "cross_desk_duplicate"},
-                gate={"reason": "cross_desk_duplicate"},
-                limits=limits,
-                min_composite=min_score,
-                target_pct=target_pct,
-                session_id=session_id,
-                skipped=True,
-                skip_reason="cross_desk_duplicate",
-            )
-            return {
-                "symbol": sym,
-                "skipped": True,
-                "reason": "cross_desk_duplicate",
-                "decision_rationale": rationale,
+        from trading.desk_universe import agent_independent_desk
+
+        if not agent_independent_desk(None):
+            cross = limits.get("cross_desk_symbols") or set()
+            sym_base = sym.upper().replace(".NSE", "")
+            mandatory = {
+                str(s or "").upper().replace(".NSE", "")
+                for s in (limits.get("mandatory_curated_symbols") or set())
             }
+            is_mandatory = bool(pick.get("mandatory_curated")) or sym_base in mandatory
+            cross_bases = {str(s).upper().replace(".NSE", "") for s in cross}
+            if not is_mandatory and (sym in cross or sym_base in cross_bases):
+                rationale = _record_buy_decision(
+                    pick=pick,
+                    trade={"skipped": True, "reason": "cross_desk_duplicate"},
+                    gate={"reason": "cross_desk_duplicate"},
+                    limits=limits,
+                    min_composite=min_score,
+                    target_pct=target_pct,
+                    session_id=session_id,
+                    skipped=True,
+                    skip_reason="cross_desk_duplicate",
+                )
+                return {
+                    "symbol": sym,
+                    "skipped": True,
+                    "reason": "cross_desk_duplicate",
+                    "decision_rationale": rationale,
+                }
 
     if pick_mode in {"auto_pick", "session_agent_auto"}:
         from trading.agent_selection import agent_candidate_gate, agent_selection_cfg
@@ -1514,9 +1573,18 @@ def run_autonomous_stock_picks(
     limits = _budget_limits(session)
     rows, universe_meta = _load_nifty500_rows()
 
-    from trading.desk_universe import agent_curated_superset_symbols, symbol_base
+    from trading.universe_ltp_watch import combined_universe_rows_for_agent, universe_ltp_watch_cfg
 
-    mandatory_syms = agent_curated_superset_symbols(session)
+    watch_cfg = universe_ltp_watch_cfg()
+    if watch_cfg.get("agent_use"):
+        rows = combined_universe_rows_for_agent(rows)
+        universe_meta = {**universe_meta, "ltp_watch": True}
+
+    from trading.desk_universe import agent_curated_superset_symbols, agent_independent_desk, symbol_base
+
+    mandatory_syms: set[str] = set()
+    if not agent_independent_desk(session):
+        mandatory_syms = agent_curated_superset_symbols(session)
     if mandatory_syms:
         have = {symbol_base(str(r.get("symbol") or "")) for r in rows}
         from trading.scheduler import _analyze_symbol
@@ -1536,6 +1604,8 @@ def run_autonomous_stock_picks(
     from trading.agent_learning import enrich_agent_candidate_rows
 
     fast_cycle = bool(execute and ap.get("agent_cycle_fast_enrich", True))
+    if execute and watch_cfg.get("enabled") and watch_cfg.get("fast_enrich_when_watch"):
+        fast_cycle = True
     rows = enrich_agent_candidate_rows(
         rows,
         priority_symbols=mandatory_syms,
@@ -1629,12 +1699,13 @@ def run_autonomous_stock_picks(
         "target_pct": target_pct,
         "allocation_strategy": "agent_smart_edge_diversified",
         "filter_funnel": filter_funnel,
-        "mandatory_curated_symbols": sorted(mandatory_syms),
+        "mandatory_curated_symbols": sorted(mandatory_syms) if mandatory_syms else [],
+        "agent_independent_desk": agent_independent_desk(session),
         "timing_blocked": timing_blocked,
         "universe_audit": universe_audit,
         "disclaimer": (
-            "Nifty 500 agent picks ranked by intraday edge + RAG learning curve + timing profiles "
-            "(same learning stack as curated desk). Not investment advice."
+            "Nifty 500 agent picks ranked by intraday edge + RAG/backtest learning + timing profiles. "
+            "Independent of curated desk when agent_independent_desk is enabled. Not investment advice."
         ),
     }
 

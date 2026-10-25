@@ -612,6 +612,64 @@ def _gross_pnl(summary: dict[str, Any]) -> tuple[float, float]:
     return profit, loss
 
 
+def delete_session_history(
+    *,
+    session_ids: Optional[list[str]] = None,
+    clear_all: bool = False,
+) -> dict[str, Any]:
+    """Remove past sessions from the gallery (never deletes an active desk)."""
+    from trading.session_autopilot import _active_sessions, _load_store, _save_store
+    from trading.session_history import _load_events_store, _save_events_store
+
+    store = _load_store()
+    active_ids = {str(s.get("id") or "") for s in _active_sessions(store) if s.get("id")}
+    rows = list(store.get("sessions") or [])
+    if clear_all:
+        targets = {str(r.get("id") or "") for r in rows if r.get("id")}
+    else:
+        targets = {str(sid).strip() for sid in (session_ids or []) if str(sid).strip()}
+    targets -= {""}
+    skipped_active = sorted(sid for sid in targets if sid in active_ids)
+    removable = targets - active_ids
+
+    kept = [row for row in rows if str(row.get("id") or "") not in removable]
+    removed_sessions = len(rows) - len(kept)
+    store["sessions"] = kept
+    if store.get("active_session_id") in removable:
+        store["active_session_id"] = None
+    ids = [sid for sid in (store.get("active_session_ids") or []) if sid not in removable]
+    store["active_session_ids"] = ids
+    _save_store(store)
+
+    removed_reports = 0
+    for sid in removable:
+        path = _report_path(sid)
+        if path.exists():
+            try:
+                path.unlink()
+                removed_reports += 1
+            except OSError:
+                pass
+
+    events_store = _load_events_store()
+    before_events = len(events_store.get("events") or [])
+    events_store["events"] = [
+        ev for ev in (events_store.get("events") or [])
+        if str(ev.get("session_id") or "") not in removable
+    ]
+    removed_events = before_events - len(events_store.get("events") or [])
+    _save_events_store(events_store)
+
+    return {
+        "ok": True,
+        "removed_sessions": removed_sessions,
+        "removed_reports": removed_reports,
+        "removed_events": removed_events,
+        "skipped_active": skipped_active,
+        "requested": len(targets),
+    }
+
+
 def list_session_report_cards(*, limit: int = 50) -> list[dict[str, Any]]:
     """Compact cards for session history UI — one row per past session."""
     from trading.session_autopilot import _hydrate_session, _load_store

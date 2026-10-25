@@ -6,7 +6,8 @@ Builds a rolling policy file consumed by agent auto-pick ranking and live gates.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+import random
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -141,6 +142,137 @@ def backtest_symbol(
     }
 
 
+def _default_price_loader() -> Callable[[str], list[dict[str, Any]]]:
+    from routes.helpers import fetch_prices_light, rows_from_payload
+
+    def load_rows(sym: str) -> list[dict[str, Any]]:
+        payload = fetch_prices_light(sym, force_refresh=False, provider="auto", allow_nse_fallback=True)
+        rows = rows_from_payload(payload)
+        if len(rows) < 30:
+            raise ValueError("insufficient history")
+        return rows
+
+    return load_rows
+
+
+def _symbol_policy_row(sym_policy: dict[str, Any], sym: str) -> dict[str, Any]:
+    key = str(sym or "").upper()
+    base = key.replace(".NSE", "")
+    return sym_policy.get(key) or sym_policy.get(f"{base}.NSE") or sym_policy.get(base) or {}
+
+
+def _backtest_stale_enough(row: dict[str, Any], *, min_hours: float = 20.0) -> bool:
+    at = row.get("backtested_at")
+    if not at:
+        return True
+    try:
+        dt = datetime.fromisoformat(str(at).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - dt) >= timedelta(hours=min_hours)
+    except Exception:
+        return True
+
+
+def sample_random_nifty_backtest_symbols(*, count: int, min_stale_hours: float = 20.0) -> list[str]:
+    """Random Nifty 500 sample, preferring symbols not backtested recently."""
+    from universe import universe_symbols
+
+    pool: list[str] = []
+    for raw in universe_symbols():
+        sym = str(raw or "").upper()
+        if not sym:
+            continue
+        pool.append(sym if sym.endswith(".NSE") else f"{sym}.NSE")
+
+    policy = load_backtest_policy()
+    sym_policy: dict[str, Any] = policy.get("symbols") or {}
+    stale = [s for s in pool if _backtest_stale_enough(_symbol_policy_row(sym_policy, s), min_hours=min_stale_hours)]
+    candidates = stale if len(stale) >= max(5, count) else pool
+    n = max(1, min(int(count), len(candidates)))
+    seed_key = f"{datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime('%Y-%m-%d')}-{n}"
+    rng = random.Random(seed_key)
+    return rng.sample(candidates, n)
+
+
+def _run_backtest_batch(
+    ordered: list[str],
+    *,
+    load_rows: Callable[[str], list[dict[str, Any]]],
+    sym_policy: dict[str, Any],
+    trig_policy: dict[str, Any],
+) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    for sym in ordered:
+        try:
+            one = backtest_symbol(sym, load_rows=load_rows)
+            results.append(one)
+            if one.get("skipped"):
+                continue
+            best = one.get("best_stats") or {}
+            sym_policy[str(one.get("symbol") or sym)] = {
+                **best,
+                "best_trigger": one.get("best_trigger"),
+                "news_stats": one.get("news_stats") or {},
+                "backtested_at": _now(),
+            }
+            for trig, stats in (one.get("trigger_stats") or {}).items():
+                prev = trig_policy.get(trig) or {}
+                n_prev = int(prev.get("n_trades") or 0)
+                n_new = int(stats.get("n_trades") or 0)
+                if n_new >= n_prev:
+                    trig_policy[trig] = stats
+        except Exception as exc:
+            results.append({"symbol": sym, "error": str(exc)[:160]})
+    return results
+
+
+def run_backtest_random_exploration_job(
+    *,
+    count: Optional[int] = None,
+    load_rows: Optional[Callable[[str], list[dict[str, Any]]]] = None,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Nightly-style random Nifty sampling to widen backtest_policy coverage."""
+    from trading.config_store import load_trading_config
+
+    cfg = load_trading_config()
+    ap = cfg.get("autopilot") or {}
+    if not force and not ap.get("backtest_agent_enabled", True):
+        return {"skipped": True, "reason": "backtest_agent_disabled"}
+    if not force and not ap.get("backtest_agent_nightly_enabled", True):
+        return {"skipped": True, "reason": "backtest_agent_nightly_disabled"}
+
+    limit = int(count or ap.get("backtest_agent_random_limit") or 25)
+    load_rows = load_rows or _default_price_loader()
+    ordered = sample_random_nifty_backtest_symbols(count=limit)
+
+    policy = load_backtest_policy()
+    sym_policy: dict[str, Any] = dict(policy.get("symbols") or {})
+    trig_policy: dict[str, Any] = dict(policy.get("triggers") or {})
+    results = _run_backtest_batch(ordered, load_rows=load_rows, sym_policy=sym_policy, trig_policy=trig_policy)
+
+    ok_count = sum(1 for r in results if not r.get("skipped") and not r.get("error"))
+    merged = save_backtest_policy({
+        "symbols": sym_policy,
+        "triggers": trig_policy,
+        "last_job": policy.get("last_job"),
+        "last_random_job": {
+            "run_at": _now(),
+            "job_kind": "random_nifty",
+            "symbol_count": len(ordered),
+            "ok_count": ok_count,
+            "sample": ordered[:8],
+        },
+    })
+    return {
+        "policy": merged,
+        "results": results[:25],
+        "symbol_count": len(ordered),
+        "job_kind": "random_nifty",
+    }
+
+
 def run_backtest_learning_job(
     *,
     symbols: Optional[list[str]] = None,
@@ -160,14 +292,7 @@ def run_backtest_learning_job(
         return {"skipped": True, "reason": "backtest_agent_disabled"}
 
     if load_rows is None:
-        from routes.helpers import fetch_prices_light, rows_from_payload
-
-        def load_rows(sym: str) -> list[dict[str, Any]]:
-            payload = fetch_prices_light(sym, force_refresh=False, provider="auto", allow_nse_fallback=True)
-            rows = rows_from_payload(payload)
-            if len(rows) < 30:
-                raise ValueError("insufficient history")
-            return rows
+        load_rows = _default_price_loader()
 
     sym_set: list[str] = []
     for s in agent_curated_superset_symbols(None) or set():
@@ -198,51 +323,38 @@ def run_backtest_learning_job(
     policy = load_backtest_policy()
     sym_policy: dict[str, Any] = dict(policy.get("symbols") or {})
     trig_policy: dict[str, Any] = dict(policy.get("triggers") or {})
-    results: list[dict[str, Any]] = []
-
-    for sym in ordered:
-        try:
-            one = backtest_symbol(sym, load_rows=load_rows)
-            results.append(one)
-            if one.get("skipped"):
-                continue
-            best = one.get("best_stats") or {}
-            sym_policy[str(one.get("symbol") or sym)] = {
-                **best,
-                "best_trigger": one.get("best_trigger"),
-                "news_stats": one.get("news_stats") or {},
-                "backtested_at": _now(),
-            }
-            for trig, stats in (one.get("trigger_stats") or {}).items():
-                prev = trig_policy.get(trig) or {}
-                n_prev = int(prev.get("n_trades") or 0)
-                n_new = int(stats.get("n_trades") or 0)
-                if n_new >= n_prev:
-                    trig_policy[trig] = stats
-        except Exception as exc:
-            results.append({"symbol": sym, "error": str(exc)[:160]})
+    results = _run_backtest_batch(ordered, load_rows=load_rows, sym_policy=sym_policy, trig_policy=trig_policy)
 
     merged = save_backtest_policy({
         "symbols": sym_policy,
         "triggers": trig_policy,
         "last_job": {
             "run_at": _now(),
+            "job_kind": "daily_curated",
             "symbol_count": len(ordered),
             "ok_count": sum(1 for r in results if not r.get("skipped") and not r.get("error")),
         },
+        "last_random_job": policy.get("last_random_job"),
     })
-    return {"policy": merged, "results": results[:25], "symbol_count": len(ordered)}
+    return {"policy": merged, "results": results[:25], "symbol_count": len(ordered), "job_kind": "daily_curated"}
 
 
 def backtest_agent_status() -> dict[str, Any]:
     from trading.config_store import load_trading_config
 
+    cfg = load_trading_config()
+    ap = cfg.get("autopilot") or {}
     policy = load_backtest_policy()
     last = policy.get("last_job") or {}
+    last_random = policy.get("last_random_job") or {}
     return {
-        "enabled": bool(load_trading_config().get("autopilot", {}).get("backtest_agent_enabled", True)),
+        "enabled": bool(ap.get("backtest_agent_enabled", True)),
+        "nightly_random_enabled": bool(ap.get("backtest_agent_nightly_enabled", True)),
+        "nightly_random_hour_ist": int(ap.get("backtest_agent_random_hour_ist") or 19),
+        "nightly_random_limit": int(ap.get("backtest_agent_random_limit") or 25),
         "updated_at": policy.get("updated_at"),
         "symbol_policies": len(policy.get("symbols") or {}),
         "trigger_policies": len(policy.get("triggers") or {}),
         "last_job": last,
+        "last_random_job": last_random,
     }

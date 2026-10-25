@@ -83,5 +83,14 @@ def daily_pipeline(
             source="daily_pipeline",
         )
 
+    try:
+        from quant_layer.order_book_screener import screen_stored, tables_available
+
+        final["order_book_watchlist"] = (
+            screen_stored() if tables_available() else {"skipped": True, "reason": "no_order_tables", "shortlist": []}
+        )
+    except Exception as exc:
+        final["order_book_watchlist"] = {"skipped": True, "reason": str(exc)[:200], "shortlist": []}
+
     save_daily_snapshot(final)
     return final

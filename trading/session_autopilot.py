@@ -1016,15 +1016,19 @@ def run_premarket_analysis(
         scan = run_morning_scan(force=False)
         result["steps"].append({"morning_scan": scan})
         scan_rows = list((scan or {}).get("rows") or [])
-        curated_syms = list(
-            (session.get("curated_symbols") or [])
-            or (cfg.get("autopilot") or {}).get("curated_symbols")
-            or []
-        )
+        from trading.desk_universe import agent_independent_desk
+
+        curated_syms: list[str] = []
+        if not agent_independent_desk(session):
+            curated_syms = list(
+                (session.get("curated_symbols") or [])
+                or (cfg.get("autopilot") or {}).get("curated_symbols")
+                or []
+            )
         if scan_rows:
             from trading.agent_learning import agent_premarket_learn
 
-            agent_learn = agent_premarket_learn(scan_rows, curated_symbols=curated_syms)
+            agent_learn = agent_premarket_learn(scan_rows, curated_symbols=curated_syms or None)
             result["steps"].append({"agent_timing_learn": agent_learn})
     else:
         symbols = list(session.get("curated_symbols") or [])
@@ -1439,31 +1443,52 @@ def run_session_cycle(
                 )
                 cfg = load_trading_config()
                 ap = cfg.get("autopilot") or {}
-        from trading.agent_picker import (
-            merge_pick_results,
-            run_autonomous_stock_picks,
-            run_given_stock_trades,
-        )
-        from trading.desk_universe import agent_curated_superset_symbols
+        from trading.agent_picker import run_autonomous_stock_picks, run_given_stock_trades
+        from trading.desk_universe import agent_independent_desk
 
         if pick_mode == "agent_auto":
-            curated_syms = sorted(agent_curated_superset_symbols(session))
-            parts: list[dict[str, Any]] = []
-            if curated_syms:
-                mirror_cap = int(ap.get("agent_max_curated_mirror_picks") or max(1, max_picks // 2))
-                parts.append(
-                    run_given_stock_trades(
-                        execute=True,
-                        max_picks=min(mirror_cap, len(curated_syms)),
-                        symbols=[f"{s}.NSE" if not str(s).endswith(".NSE") else s for s in curated_syms],
-                        session=session,
-                        pick_mode_override="session_agent_auto",
-                    )
+            if agent_independent_desk(session):
+                pick_result = run_autonomous_stock_picks(
+                    execute=True, max_picks=max_picks, session=session
                 )
-            parts.append(
-                run_autonomous_stock_picks(execute=True, max_picks=max_picks, session=session)
-            )
-            pick_result = merge_pick_results(*parts)
+            else:
+                from trading.agent_picker import merge_pick_results
+                from trading.desk_universe import agent_curated_gap_symbols, agent_curated_superset_symbols
+
+                parts: list[dict[str, Any]] = []
+                allow_overlap = bool(ap.get("agent_dual_allow_curated_overlap", False))
+                if ap.get("agent_dual_fill_curated_gaps", True) and not allow_overlap:
+                    gap_syms = agent_curated_gap_symbols(session, session_id=session_id)
+                    if gap_syms:
+                        mirror_cap = int(ap.get("agent_max_curated_mirror_picks") or max(1, max_picks // 2))
+                        parts.append(
+                            run_given_stock_trades(
+                                execute=True,
+                                max_picks=min(mirror_cap, len(gap_syms)),
+                                symbols=gap_syms,
+                                session=session,
+                                pick_mode_override="session_agent_auto",
+                            )
+                        )
+                elif allow_overlap:
+                    curated_syms = sorted(agent_curated_superset_symbols(session))
+                    if curated_syms:
+                        mirror_cap = int(ap.get("agent_max_curated_mirror_picks") or max(1, max_picks // 2))
+                        parts.append(
+                            run_given_stock_trades(
+                                execute=True,
+                                max_picks=min(mirror_cap, len(curated_syms)),
+                                symbols=[
+                                    f"{s}.NSE" if not str(s).endswith(".NSE") else s for s in curated_syms
+                                ],
+                                session=session,
+                                pick_mode_override="session_agent_auto",
+                            )
+                        )
+                parts.append(
+                    run_autonomous_stock_picks(execute=True, max_picks=max_picks, session=session)
+                )
+                pick_result = merge_pick_results(*parts)
         else:
             symbols = list(session.get("curated_symbols") or [])
             pick_result = run_given_stock_trades(

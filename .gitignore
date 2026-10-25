@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .env
+data/user_secrets.json
 data/chroma/
 data/books/*.pdf
 data/raw/

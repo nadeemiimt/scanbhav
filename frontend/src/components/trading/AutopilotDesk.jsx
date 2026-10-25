@@ -3,6 +3,7 @@ import { apiGet, apiGetOptional, apiPatch, apiPost } from '../../lib/apiClient'
 import { AppAlertList } from '../ui/AppAlert'
 import { SymbolSearchField } from '../ui/SymbolSearchField'
 import { TradePlanPanel } from './TradePlanPanel'
+import { SimpleBacktestPanel } from '../integrations/IntegrationsPanel'
 import { SessionReportsPanel } from './SessionReportsPanel'
 import useConfirmDialog from '../../hooks/useConfirmDialog'
 import { useSymbolSearch } from '../../hooks/useSymbolSearch'
@@ -70,6 +71,7 @@ export function AutopilotDesk() {
   const [watchInput, setWatchInput] = useState('')
   const [morningScan, setMorningScan] = useState(null)
   const [quantDigest, setQuantDigest] = useState(null)
+  const [decisionDesk, setDecisionDesk] = useState(null)
   const [timing, setTiming] = useState(null)
   const [ltpStream, setLtpStream] = useState(null)
   const [session, setSession] = useState(null)
@@ -101,6 +103,7 @@ export function AutopilotDesk() {
   const [progressPolling, setProgressPolling] = useState(false)
   const [secondaryLoading, setSecondaryLoading] = useState(false)
   const [profitProfiles, setProfitProfiles] = useState(null)
+  const [backtestAgent, setBacktestAgent] = useState(null)
   const symbolSearch = useSymbolSearch('')
 
   const fetchEodReport = useCallback(async (sessionId, { stale = false } = {}) => {
@@ -273,7 +276,7 @@ export function AutopilotDesk() {
 
       setSecondaryLoading(true)
       const [
-        sb, al, cal, id, ms, qd, tm, ls, sess, reportsPayload, profitProf,
+        sb, al, cal, id, ms, qd, tm, ls, sess, reportsPayload, profitProf, btAgent, decision,
       ] = await Promise.all([
         apiGetOptional('/api/trading/scoreboard'),
         apiGetOptional('/api/trading/alerts'),
@@ -286,6 +289,8 @@ export function AutopilotDesk() {
         apiGetOptional('/api/trading/session/status'),
         apiGetOptional('/api/trading/session/reports?limit=50'),
         apiGetOptional('/api/trading/profit-profile'),
+        apiGetOptional('/api/trading/backtest-agent/status'),
+        apiGetOptional('/api/quant/decision'),
       ])
       setSecondaryLoading(false)
 
@@ -295,9 +300,11 @@ export function AutopilotDesk() {
       if (id) setIntraday(id)
       if (ms) setMorningScan(ms)
       if (qd && !qd.detail) setQuantDigest(qd)
+      if (decision) setDecisionDesk(decision)
       if (tm) setTiming(tm)
       if (ls) setLtpStream(ls)
       if (profitProf) setProfitProfiles(profitProf)
+      if (btAgent) setBacktestAgent(btAgent)
       if (reportsPayload) setSessionReports(reportsPayload.sessions || [])
 
       if (sess) {
@@ -848,6 +855,42 @@ export function AutopilotDesk() {
     }
   }
 
+  async function clearSessionReports({ sessionIds = [], clearAll = false } = {}) {
+    const count = clearAll ? sessionReports.length : sessionIds.length
+    if (!count) return
+    const ok = await confirm({
+      title: clearAll ? 'Clear all session history?' : 'Clear selected sessions?',
+      message: clearAll
+        ? `This removes ${count} past session card(s), their PDF reports, and related event logs. Active desks stay running.`
+        : `This removes ${count} selected session(s) from history. Active desks are never deleted.`,
+      confirmLabel: clearAll ? 'Clear all' : 'Clear selected',
+      variant: 'danger',
+    })
+    if (!ok) return
+    setBusy('clear-reports')
+    try {
+      const result = await apiPost('/api/trading/session/reports/clear', {
+        clear_all: !!clearAll,
+        session_ids: clearAll ? [] : sessionIds,
+      })
+      if (selectedReportId && (clearAll || sessionIds.includes(selectedReportId))) {
+        setSelectedReportId('')
+        setEodReport(null)
+      }
+      const skipped = (result.skipped_active || []).length
+      setStatusMsg(
+        skipped
+          ? `Cleared ${result.removed_sessions || 0} session(s). Skipped ${skipped} active desk(s).`
+          : `Cleared ${result.removed_sessions || 0} session(s).`,
+      )
+      await refresh()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
   async function stopSession(sessionId = null) {
     setBusy('session')
     try {
@@ -1309,11 +1352,14 @@ export function AutopilotDesk() {
                 Curated {session.desk_gap.curated?.open_count ?? 0} open / {session.desk_gap.curated?.trade_count ?? 0} trades
               </p>
               {(session.desk_gap.curated_not_on_agent?.length ?? 0) > 0 && (
-                <p className="down subtle">
-                  Curated not on AI: {session.desk_gap.curated_not_on_agent.slice(0, 8).join(', ')}
+                <p className="subtle">
+                  Curated-only open (informational): {session.desk_gap.curated_not_on_agent.slice(0, 8).join(', ')}
                   {session.desk_gap.curated_not_on_agent.length > 8 ? '…' : ''}
                 </p>
               )}
+              <p className="subtle">
+                Auto runs independently of the curated list; overlap is coincidental, not mirrored picks.
+              </p>
               {session.desk_gap.agent_last_pick?.affordable_candidates === 0 && (
                 <p className="subtle">Last AI cycle: 0 affordable candidates — scheduler will retry with curated overlap.</p>
               )}
@@ -1332,6 +1378,21 @@ export function AutopilotDesk() {
                   )}
                 </p>
               )}
+            </div>
+          )}
+          {backtestAgent?.enabled && (
+            <div className="panel-inset subtle" style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8 }}>
+              <p className="eyebrow">BACKTEST LEARNING AGENT</p>
+              <p className="subtle">
+                Policy {backtestAgent.symbol_policies ?? 0} symbols · nightly random{' '}
+                {backtestAgent.nightly_random_enabled ? `on (${backtestAgent.nightly_random_hour_ist}:00 IST, ${backtestAgent.nightly_random_limit}/night)` : 'off'}
+                {backtestAgent.last_random_job?.run_at && (
+                  <>
+                    {' · '}
+                    last random {backtestAgent.last_random_job.ok_count ?? '?'}/{backtestAgent.last_random_job.symbol_count ?? '?'} ok
+                  </>
+                )}
+              </p>
             </div>
           )}
           <div className="session-progress-desks">
@@ -1940,6 +2001,7 @@ export function AutopilotDesk() {
         busy={busy}
         onSelect={openSessionReport}
         onDownloadPdf={downloadSessionReportPdf}
+        onClear={clearSessionReports}
       />
 
       {eodReport?.summary && (
@@ -2220,6 +2282,41 @@ export function AutopilotDesk() {
 
       <section className="panel">
         <div className="panel-head">
+          <div><p className="eyebrow">DECISION DESK</p><h3>Review only</h3></div>
+        </div>
+        <p className="subtle">
+          {decisionDesk?.headline || 'A short list to review. Nothing here places an order.'}
+          {' '}If a name is here, it only means the rules fired. It is not advice to buy or sell.
+        </p>
+        {(decisionDesk?.technical_reviews || []).length > 0 && (
+          <ul className="subtle" style={{ marginTop: 8 }}>
+            {decisionDesk.technical_reviews.slice(0, 5).map(row => (
+              <li key={`tech-${row.symbol}`}>
+                <b>{row.symbol}</b>
+                {row.conviction != null ? ` · conviction ${row.conviction}` : ''}
+                {' — '}{row.why}
+              </li>
+            ))}
+          </ul>
+        )}
+        {(decisionDesk?.order_book_watchlist || []).length > 0 && (
+          <ul className="subtle" style={{ marginTop: 8 }}>
+            {decisionDesk.order_book_watchlist.slice(0, 5).map(row => (
+              <li key={`ob-${row.symbol}`}>
+                <b>{row.symbol}</b> · {row.why}
+              </li>
+            ))}
+          </ul>
+        )}
+        {!decisionDesk?.technical_reviews?.length && !decisionDesk?.order_book_watchlist?.length && (
+          <p className="subtle">No cached review list yet. Run the quant pipeline, or add order tables and screen them.</p>
+        )}
+      </section>
+
+      <SimpleBacktestPanel />
+
+      <section className="panel">
+        <div className="panel-head">
           <div><p className="eyebrow">QUANT PIPELINE</p><h3>Layer 1 triggers + LLM digest</h3></div>
           <button type="button" className="ghost" disabled={!!busy} onClick={runQuantPipeline}>Run pipeline</button>
         </div>
@@ -2368,6 +2465,15 @@ export function AutopilotDesk() {
             {' · '}
             Cache: {ltpStream.cache?.fresh_60s ?? 0}/{ltpStream.cache?.symbols ?? 0} fresh
             {ltpStream.gateway_mode && ' · gateway mode (stream runs on gateway host)'}
+            {ltpStream.universe_ltp_watch?.enabled && (
+              <>
+                {' · '}
+                Nifty watch: {ltpStream.universe_ltp_watch.running ? 'on' : 'off'}
+                {' '}
+                ({ltpStream.universe_ltp_watch.cache_fresh ?? 0} fresh ≤90s /{' '}
+                {ltpStream.universe_ltp_watch.universe_size ?? 500})
+              </>
+            )}
           </p>
         )}
         <label className="refresh-toggle">

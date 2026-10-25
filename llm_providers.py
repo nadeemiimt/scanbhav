@@ -45,19 +45,36 @@ def _reload_dotenv() -> None:
         pass
 
 
+def _ui_secret(*ids: str) -> str:
+    try:
+        from integrations.keys import get_secret
+
+        for sid in ids:
+            val = get_secret(sid).strip()
+            if val:
+                return val
+    except Exception:
+        pass
+    return ""
+
+
 def cursor_api_key() -> str:
     _reload_dotenv()
-    return (setting("CURSOR_API_KEY", "") or "").strip()
+    return (setting("CURSOR_API_KEY", "") or _ui_secret("cursor")).strip()
 
 
 def openai_api_key() -> str:
     _reload_dotenv()
-    return (setting("OPENAI_API_KEY", "") or setting("GENAI_API_KEY", "") or "").strip()
+    return (
+        setting("OPENAI_API_KEY", "")
+        or setting("GENAI_API_KEY", "")
+        or _ui_secret("openai")
+    ).strip()
 
 
 def anthropic_api_key() -> str:
     _reload_dotenv()
-    return (setting("ANTHROPIC_API_KEY", "") or "").strip()
+    return (setting("ANTHROPIC_API_KEY", "") or _ui_secret("anthropic")).strip()
 
 # Friendly catalog shown in UI — actual availability depends on keys / Ollama.
 PROVIDER_CATALOG: list[dict[str, Any]] = [

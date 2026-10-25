@@ -62,6 +62,17 @@ def _slim_row(item: dict[str, Any], horizon: str) -> dict[str, Any]:
         plan_fields["plan_target_day"] = plan.get("target_day") or session_plan_target_day()
     except Exception:
         plan_fields = {}
+    horizon_scores = {}
+    for hid, row in horizons.items():
+        if not isinstance(row, dict):
+            continue
+        horizon_scores[hid] = {
+            "score": row.get("score"),
+            "grade": row.get("grade"),
+            "stance": row.get("stance"),
+            "horizon_return_pct": row.get("horizon_return_pct"),
+            "reasons": list(row.get("reasons") or [])[:4],
+        }
     return {
         "rank": item.get("rank"),
         "section_rank": item.get("section_rank"),
@@ -74,6 +85,7 @@ def _slim_row(item: dict[str, Any], horizon: str) -> dict[str, Any]:
         "stance": rating.get("stance"),
         "composite_score": (item.get("ratings") or {}).get("composite_score"),
         "horizon_return_pct": rating.get("horizon_return_pct"),
+        "horizon_scores": horizon_scores,
         "rsi_14": item["technicals"]["momentum"]["rsi_14"],
         "atr_14": (item["technicals"].get("volatility") or {}).get("atr_14"),
         "atr_pct": (item["technicals"].get("volatility") or {}).get("atr_pct"),

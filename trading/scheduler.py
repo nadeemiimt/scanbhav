@@ -10,6 +10,7 @@ logger = get_logger(__name__)
 
 _task: Optional[asyncio.Task] = None
 _morning_ran_date: Optional[str] = None
+_nightly_backtest_ran_date: Optional[str] = None
 
 
 def _analyze_symbol(symbol: str, provider: str = "auto") -> dict[str, Any]:
@@ -39,8 +40,19 @@ def _quote_symbol(symbol: str, provider: str = "auto") -> float:
     from brokers.service import get_live_quotes
 
     cfg = load_trading_config()
-    broker = str(cfg.get("default_broker") or "stub")
+    ap = cfg.get("autopilot") or {}
     sym = symbol.upper()
+    if ap.get("agent_use_universe_ltp", True):
+        try:
+            from brokers.quote_cache import get_ltp
+
+            max_age = float(ap.get("universe_ltp_max_age_seconds") or 90)
+            row = get_ltp(sym, max_age_seconds=max_age)
+            if row and row.get("price"):
+                return float(row["price"])
+        except Exception:
+            pass
+    broker = str(cfg.get("default_broker") or "stub")
     q = get_live_quotes(broker, [sym])
     price = (q.get("quotes") or {}).get(sym, {}).get("price")
     if price:
@@ -49,10 +61,11 @@ def _quote_symbol(symbol: str, provider: str = "auto") -> float:
 
 
 async def _loop() -> None:
-    global _morning_ran_date
+    global _morning_ran_date, _nightly_backtest_ran_date
     from trading.config_store import load_trading_config
     from trading.autopilot import run_autopilot_cycle
     from trading.morning_scan import run_morning_scan, should_run_morning_scan, _today_ist
+    from trading.market_hours import _minutes_ist
 
     while True:
         try:
@@ -90,6 +103,34 @@ async def _loop() -> None:
                         _morning_ran_date = today
                         logger.info("Morning scan done: scored=%s", result.get("scored"))
 
+            if ap.get("backtest_agent_enabled", True) and ap.get("backtest_agent_nightly_enabled", True):
+                today = _today_ist()
+                random_hour = int(ap.get("backtest_agent_random_hour_ist") or 19)
+                if _nightly_backtest_ran_date != today and _minutes_ist() >= random_hour * 60:
+                    try:
+                        from trading.backtest_agent import run_backtest_random_exploration_job
+
+                        logger.info(
+                            "Running nightly random Nifty backtest exploration (limit=%s)…",
+                            ap.get("backtest_agent_random_limit") or 25,
+                        )
+                        result = await asyncio.to_thread(run_backtest_random_exploration_job, force=False)
+                        _nightly_backtest_ran_date = today
+                        if result.get("skipped"):
+                            logger.info("Nightly backtest skipped: %s", result.get("reason"))
+                        else:
+                            logger.info(
+                                "Nightly backtest done: symbols=%s ok=%s",
+                                result.get("symbol_count"),
+                                sum(
+                                    1
+                                    for r in (result.get("results") or [])
+                                    if not r.get("skipped") and not r.get("error")
+                                ),
+                            )
+                    except Exception as exc:
+                        logger.warning("Nightly random backtest failed: %s", exc)
+
             # Session active: also run during pre-market (09:00+) for analysis before 09:15 open
             if ap.get("enabled"):
                 try:
@@ -124,6 +165,13 @@ def start_scheduler() -> None:
     global _task
     if _task and not _task.done():
         return
+    try:
+        from trading.universe_ltp_watch import start_universe_ltp_watch, universe_ltp_watch_cfg
+
+        if universe_ltp_watch_cfg().get("enabled"):
+            start_universe_ltp_watch()
+    except Exception as exc:
+        logger.debug("Universe LTP watch bootstrap: %s", exc)
     try:
         loop = asyncio.get_event_loop()
         _task = loop.create_task(_loop())

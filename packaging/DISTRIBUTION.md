@@ -4,6 +4,8 @@ Desktop builds bundle the FastAPI backend + React UI into a single launcher. **B
 
 ## Quick build
 
+PyInstaller builds are **platform-native**: Mac on macOS, Windows on Windows (or use GitHub Actions → **Desktop packages** workflow → download artifacts).
+
 ### macOS
 
 ```bash
@@ -24,7 +26,7 @@ chmod +x scripts/build-release.sh
 
 ### Windows
 
-In PowerShell (from project root):
+In PowerShell (from project root on a Windows machine):
 
 ```powershell
 python -m venv .venv
@@ -40,6 +42,24 @@ pip install -r requirements.txt
 | `ScanBhav\ScanBhav.exe` | Run this executable |
 | `ScanBhav-Windows-v0.6.0.zip` | Share the whole folder |
 
+### CI (both platforms)
+
+GitHub Actions workflow `.github/workflows/desktop-packages.yml` builds Mac + Windows on `workflow_dispatch` or version tags. Download the `ScanBhav-macOS` and `ScanBhav-Windows` artifacts from the run.
+
+## Tokens required to run
+
+**Core desk needs no API key.** Analyze, Screener, horizon picks, paper Autopilot, and backtests use Yahoo Finance + NSE public data.
+
+| Need | Token | Where to set |
+| --- | --- | --- |
+| Core (paper) | None | — |
+| GenAI notes | OpenAI or Anthropic key, **or** local [Ollama](https://ollama.com) | Settings → Your API keys |
+| Backup prices / news | Alpha Vantage, Finnhub | Settings → Your API keys |
+| Cursor code learning | Cursor API key | Settings → Your API keys (only if you allow edits) |
+| Live ticks / live orders | Zerodha / Groww / FYERS app key + secret, then daily OAuth | Settings → Broker app keys, then Accounts |
+
+Keys saved in the UI live in `data/user_secrets.json` under the user data folder (never shipped in the installer). Clear from the same Settings panel.
+
 ## First launch (end users)
 
 1. Open the app — a browser tab opens at `http://127.0.0.1:8000`.
@@ -51,7 +71,7 @@ pip install -r requirements.txt
    | Windows | `%LOCALAPPDATA%\ScanBhav` |
    | Linux | `~/.scanbhav` |
 
-3. Copy `.env.example` → `.env` in that folder (done automatically on first run) and add API keys / broker credentials.
+3. Open **Settings → Your API keys** for the token guide and optional keys. `.env` in the data folder still works as an override.
 4. Optional: install [Ollama](https://ollama.com) for local LLM + embeddings.
 
 Override data directory:

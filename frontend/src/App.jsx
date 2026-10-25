@@ -3,6 +3,7 @@ import PersonalAdvisor from './PersonalAdvisor'
 import ScreenTable from './ScreenTable'
 import { TradePlan15dPanel } from './components/TradePlan15dPanel'
 import { TradePlan7dPanel, tradePlan7dHint } from './components/TradePlan7dPanel'
+import { HorizonPicksPanel, VerdictSummaryPanel } from './components/HorizonPicksPanel'
 import { DailyTriggersPanel, dailyTriggersHint } from './components/DailyTriggersPanel'
 import {
   effectiveScreenPageContract,
@@ -583,7 +584,11 @@ export default function App() {
 
   async function loadMarketBoard() {
     try {
-      const data = await apiGetOptional('/api/market/board?limit=500&top_n=10')
+      let data = await apiGetOptional('/api/market/board?limit=500&top_n=10')
+      if (!data) {
+        await new Promise(r => setTimeout(r, 1200))
+        data = await apiGetOptional('/api/market/board?limit=500&top_n=10')
+      }
       if (!data) return
       setMarketBoard(data)
       if (data.ticker?.length) setTickerItems(data.ticker)
@@ -986,8 +991,12 @@ export default function App() {
         <div className="ticker-meta">
           {marketBoard?.meta?.indices_live
             ? <span className="ticker-status is-live">LIVE indices</span>
-            : <span className="ticker-status is-loading">Index quotes loading…</span>}
-          <span className="ticker-note">Stock movers = last cached session</span>
+            : marketBoard
+              ? <span className="ticker-status">Indices offline · movers OK</span>
+              : <span className="ticker-status is-loading">Index quotes loading…</span>}
+          <span className="ticker-note">
+            {marketBoard?.meta?.indices_note || 'Stock movers = last cached session'}
+          </span>
         </div>
         <div className="ticker-track-wrap">
           <div className="ticker-track">
@@ -1045,11 +1054,11 @@ export default function App() {
         {tab === 'single' && (
           <section className="page-hero">
             <div>
-              <p className="eyebrow">India equities · neural research desk</p>
-              <h1>Read the tape.<br /><span>Rank the horizon.</span></h1>
+              <p className="eyebrow">AI research desk · India equities</p>
+              <h1>See the signal.<br /><span>Decide with a reason.</span></h1>
               <p>
-                Full technical stack with hover explainers, candle charts, investor-style lenses,
-                and a local paper portfolio with Zerodha/Groww fees plus Indian STCG/LTCG tax.
+                A next-generation desk that ranks names, explains the rule that fired,
+                and keeps the buy or sell decision with you.
               </p>
             </div>
             <div className="hero-stats">
@@ -1058,6 +1067,16 @@ export default function App() {
               <article className="hero-stat"><p>Investors</p><strong>5</strong></article>
             </div>
           </section>
+        )}
+
+        {(tab === 'single' || tab === 'multi') && (
+          <HorizonPicksPanel
+            onAnalyze={(sym) => {
+              setSymbol(sym)
+              analyzeStock(sym)
+              go('single')
+            }}
+          />
         )}
 
         {(tab === 'single' || tab === 'multi') && (
@@ -1256,6 +1275,7 @@ export default function App() {
             </section>
 
             <VerdictStrip analysis={analysis} beginnerMode={beginnerMode} />
+            <VerdictSummaryPanel summary={analysis?.verdict_summary} />
 
             {/* Priority sequence: dossier → collapsed plans → charts → investor lenses */}
             {!beginnerMode && analysis.dossier && (

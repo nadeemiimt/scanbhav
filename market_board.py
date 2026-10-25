@@ -1,22 +1,31 @@
-"""Market board: live-ish index ticker + top winners/losers from cached daily data."""
+"""Market board: index strip + top winners/losers from cached daily data."""
 from __future__ import annotations
 
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Optional
+
+import requests
 
 from config import BASE_DIR
 from universe import universe_symbols
 
 RAW_DIR = BASE_DIR / "data" / "raw"
 MOVERS_CACHE = BASE_DIR / "data" / "screen_cache" / "movers.json"
+INDICES_CACHE = BASE_DIR / "data" / "screen_cache" / "indices.json"
+
+MOVERS_TTL_SEC = 30 * 60
+INDICES_TTL_SEC = 3 * 60
 
 INDEX_YAHOO = [
-    {"id": "NIFTY", "yahoo": "^NSEI", "label": "NIFTY 50"},
-    {"id": "SENSEX", "yahoo": "^BSESN", "label": "SENSEX"},
-    {"id": "BANKNIFTY", "yahoo": "^NSEBANK", "label": "Bank Nifty"},
-    {"id": "INDIA VIX", "yahoo": "^INDIAVIX", "label": "India VIX"},
+    {"id": "NIFTY", "yahoo": "^NSEI", "label": "NIFTY 50", "nse_names": ("NIFTY 50",)},
+    # Sensex is BSE-only; keep Yahoo as optional fallback when not rate-limited.
+    {"id": "SENSEX", "yahoo": "^BSESN", "label": "SENSEX", "nse_names": ()},
+    {"id": "BANKNIFTY", "yahoo": "^NSEBANK", "label": "Bank Nifty", "nse_names": ("NIFTY BANK",)},
+    {"id": "NIFTY500", "yahoo": "^CRSLDX", "label": "Nifty 500", "nse_names": ("NIFTY 500",)},
+    {"id": "INDIA VIX", "yahoo": "^INDIAVIX", "label": "India VIX", "nse_names": ("INDIA VIX",)},
 ]
 
 
@@ -46,15 +55,14 @@ def _change_from_rows(rows: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
 
 def _load_cached_rows(symbol: str) -> list[dict[str, Any]]:
     path = RAW_DIR / symbol.replace("/", "_") / "daily_adjusted.json"
-    # safe_name style used in api — try both
+    import re
+
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", symbol.upper())
     candidates = [
+        RAW_DIR / safe / "daily_adjusted.json",
         RAW_DIR / symbol.upper() / "daily_adjusted.json",
         path,
     ]
-    # Match api.safe_name loosely
-    import re
-    safe = re.sub(r"[^A-Za-z0-9._-]", "_", symbol.upper())
-    candidates.insert(0, RAW_DIR / safe / "daily_adjusted.json")
     for candidate in candidates:
         if not candidate.exists():
             continue
@@ -69,8 +77,32 @@ def _load_cached_rows(symbol: str) -> list[dict[str, Any]]:
     return []
 
 
-def compute_stock_movers(limit_universe: int = 500, top_n: int = 10) -> dict[str, Any]:
+def _load_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def compute_stock_movers(limit_universe: int = 500, top_n: int = 10, *, force: bool = False) -> dict[str, Any]:
     """Rank cached NSE universe by latest 1D % change."""
+    cached = _load_json(MOVERS_CACHE)
+    fetched_at = float(cached.get("fetched_at") or 0)
+    if (
+        not force
+        and cached.get("winners")
+        and int(cached.get("universe_limit") or 0) >= int(limit_universe)
+        and (time.time() - fetched_at) < MOVERS_TTL_SEC
+    ):
+        return cached
+
     symbols = universe_symbols(limit_universe)
     movers: list[dict[str, Any]] = []
     missing = 0
@@ -94,6 +126,8 @@ def compute_stock_movers(limit_universe: int = 500, top_n: int = 10) -> dict[str
     payload = {
         "source": "cached_daily_closes",
         "live": False,
+        "fetched_at": time.time(),
+        "universe_limit": limit_universe,
         "note": (
             "Winners/losers use the latest two sessions in your local Yahoo/NSE cache "
             "(end-of-day). Run the screener or analyze stocks to refresh caches. "
@@ -104,72 +138,137 @@ def compute_stock_movers(limit_universe: int = 500, top_n: int = 10) -> dict[str
         "winners": winners,
         "losers": losers,
     }
-    MOVERS_CACHE.parent.mkdir(parents=True, exist_ok=True)
-    MOVERS_CACHE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    _save_json(MOVERS_CACHE, payload)
     return payload
 
 
-def fetch_live_indices() -> list[dict[str, Any]]:
-    """Best-effort live (or delayed) index quotes from Yahoo Finance."""
+def _nse_session() -> requests.Session:
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "application/json",
+        "Referer": "https://www.nseindia.com/",
+    })
     try:
-        import yfinance as yf
+        session.get("https://www.nseindia.com/", timeout=12)
+    except Exception:
+        pass
+    return session
+
+
+def _fetch_nse_indices() -> list[dict[str, Any]]:
+    """Primary path: NSE allIndices (no Yahoo rate limit)."""
+    try:
+        session = _nse_session()
+        response = session.get("https://www.nseindia.com/api/allIndices", timeout=15)
+        if response.status_code != 200:
+            return []
+        rows = response.json().get("data") or []
     except Exception:
         return []
 
+    by_name = {str(row.get("index") or "").strip().upper(): row for row in rows}
     out: list[dict[str, Any]] = []
-
-    def one(meta: dict[str, str]) -> Optional[dict[str, Any]]:
+    for meta in INDEX_YAHOO:
+        row = None
+        for name in meta.get("nse_names") or ():
+            row = by_name.get(str(name).upper())
+            if row:
+                break
+        if not row:
+            continue
         try:
-            t = yf.Ticker(meta["yahoo"])
-            fast = {}
-            try:
-                fast = t.fast_info or {}
-            except Exception:
-                fast = {}
-            info = {}
-            try:
-                info = t.info or {}
-            except Exception:
-                info = {}
-
-            def val(*names: str) -> Any:
-                for name in names:
-                    candidate = fast.get(name, info.get(name))
-                    if candidate is not None:
-                        try:
-                            return float(candidate)
-                        except (TypeError, ValueError):
-                            return candidate
-                return None
-
-            price = val("lastPrice", "regularMarketPrice", "previousClose")
-            prev = val("previousClose", "regularMarketPreviousClose")
-            if price is None:
-                return None
+            price = float(row.get("last") or 0)
+        except (TypeError, ValueError):
+            continue
+        if price <= 0:
+            continue
+        try:
+            change_pct = float(row.get("percentChange")) if row.get("percentChange") is not None else None
+        except (TypeError, ValueError):
             change_pct = None
-            if prev not in (None, 0):
-                change_pct = round((float(price) / float(prev) - 1) * 100, 2)
-            return {
-                "id": meta["id"],
-                "label": meta["label"],
-                "yahoo": meta["yahoo"],
-                "price": round(float(price), 2),
-                "change_pct": change_pct,
-                "live": True,
-            }
-        except Exception:
-            return None
+        out.append({
+            "id": meta["id"],
+            "label": meta["label"],
+            "yahoo": meta["yahoo"],
+            "price": round(price, 2),
+            "change_pct": round(change_pct, 2) if change_pct is not None else None,
+            "live": True,
+            "source": "nse_all_indices",
+        })
+    return out
 
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        futs = [pool.submit(one, m) for m in INDEX_YAHOO]
-        for fut in as_completed(futs):
-            item = fut.result()
+
+def _series_last_two(close) -> tuple[Optional[float], Optional[float]]:
+    try:
+        if hasattr(close, "ndim") and close.ndim > 1:
+            close = close.iloc[:, 0]
+        last = float(close.iloc[-1])
+        prev = float(close.iloc[-2]) if len(close) > 1 else None
+        return last, prev
+    except Exception:
+        return None, None
+
+
+def _fetch_yahoo_index(meta: dict[str, str]) -> Optional[dict[str, Any]]:
+    """Fallback for symbols NSE does not publish (Sensex). Prefer one download call."""
+    try:
+        import yfinance as yf
+    except Exception:
+        return None
+    sym = meta["yahoo"]
+    try:
+        frame = yf.download(sym, period="5d", progress=False, threads=False)
+        if frame is None or getattr(frame, "empty", True):
+            return None
+        last, prev = _series_last_two(frame["Close"])
+        if last is None:
+            return None
+        change_pct = None
+        if prev not in (None, 0):
+            change_pct = round((last / prev - 1) * 100, 2)
+        return {
+            "id": meta["id"],
+            "label": meta["label"],
+            "yahoo": sym,
+            "price": round(last, 2),
+            "change_pct": change_pct,
+            "live": True,
+            "source": "yahoo_download",
+        }
+    except Exception:
+        return None
+
+
+def fetch_live_indices(*, force: bool = False) -> list[dict[str, Any]]:
+    """NSE first, Yahoo only for gaps, then short disk cache."""
+    cached = _load_json(INDICES_CACHE)
+    fetched_at = float(cached.get("fetched_at") or 0)
+    cached_rows = list(cached.get("indices") or [])
+    if not force and cached_rows and (time.time() - fetched_at) < INDICES_TTL_SEC:
+        return cached_rows
+
+    out = _fetch_nse_indices()
+    have = {item["id"] for item in out}
+    missing = [meta for meta in INDEX_YAHOO if meta["id"] not in have]
+    if missing:
+        # Sensex (and any other gap) — one Yahoo call at a time to reduce rate limits.
+        for meta in missing:
+            item = _fetch_yahoo_index(meta)
             if item:
                 out.append(item)
 
-    # Keep stable order
+    if not out and cached_rows:
+        for item in cached_rows:
+            item = dict(item)
+            item["live"] = False
+            item["stale"] = True
+            out.append(item)
+
     order = {m["id"]: i for i, m in enumerate(INDEX_YAHOO)}
     out.sort(key=lambda x: order.get(x["id"], 99))
+    if out and any(not item.get("stale") for item in out):
+        _save_json(INDICES_CACHE, {"fetched_at": time.time(), "indices": out})
     return out
 
 
@@ -182,11 +281,10 @@ def build_ticker_strip(movers: dict[str, Any], indices: list[dict[str, Any]]) ->
             "v": f"{item['price']:,.2f}",
             "c": (f"{ch:+.2f}%" if ch is not None else "—"),
             "up": (ch or 0) >= 0,
-            "live": True,
+            "live": bool(item.get("live")),
             "price": item["price"],
             "change_pct": ch,
         })
-    # Mix a few winners + losers so the tape feels alive
     for item in (movers.get("winners") or [])[:4]:
         strip.append({
             "s": item["name"],
@@ -213,9 +311,13 @@ def build_ticker_strip(movers: dict[str, Any], indices: list[dict[str, Any]]) ->
 
 
 def market_board(limit_universe: int = 500, top_n: int = 10, with_live_indices: bool = True) -> dict[str, Any]:
-    movers = compute_stock_movers(limit_universe=limit_universe, top_n=top_n)
-    indices = fetch_live_indices() if with_live_indices else []
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        movers_fut = pool.submit(compute_stock_movers, limit_universe, top_n)
+        indices_fut = pool.submit(fetch_live_indices) if with_live_indices else None
+        movers = movers_fut.result()
+        indices = indices_fut.result() if indices_fut else []
     strip = build_ticker_strip(movers, indices)
+    live_count = sum(1 for item in indices if item.get("live") and not item.get("stale"))
     return {
         "ticker": strip,
         "indices": indices,
@@ -224,13 +326,16 @@ def market_board(limit_universe: int = 500, top_n: int = 10, with_live_indices: 
         "meta": {
             "scanned": movers["scanned"],
             "missing_cache": movers["missing_cache"],
-            "indices_live": bool(indices),
+            "indices_live": live_count > 0,
+            "indices_count": len(indices),
             "stock_moves_live": False,
             "note": movers["note"],
             "indices_note": (
-                "Index strip values are Yahoo delayed/live quotes when available."
-                if indices
-                else "Index live quotes unavailable — stock movers still from local cache."
+                f"{live_count} index quotes from NSE"
+                + (" (+ Yahoo for Sensex)" if any(i.get("source") == "yahoo_download" for i in indices) else "")
+                + "."
+                if live_count
+                else "Index quotes unavailable right now — stock movers still from local cache."
             ),
         },
     }

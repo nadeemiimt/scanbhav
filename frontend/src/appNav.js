@@ -13,18 +13,18 @@ export const RESEARCH_NAV = [
   { id: 'portfolio', label: 'Portfolio' },
 ]
 
-/** Full nav — all features remain reachable (PDF + research stack preserved). */
+/** Essential desks — extras live under Settings → More desks. */
 export const PRIMARY_NAV = [
   { id: 'single', label: 'Analyze' },
   { id: 'multi', label: 'Screener' },
-  { id: 'swing', label: 'Swing' },
   { id: 'autopilot', label: 'Autopilot' },
-  { id: 'portfolio', label: 'Portfolio' },
-  { id: 'accounts', label: 'Accounts' },
   { id: 'markets', label: 'Markets' },
+  { id: 'accounts', label: 'Accounts' },
 ]
 
 export const SECONDARY_NAV = [
+  { id: 'swing', label: 'Swing', hint: 'Multi-day setups' },
+  { id: 'portfolio', label: 'Portfolio', hint: 'Paper book' },
   { id: 'coach', label: 'Coach', hint: 'Practice & drills' },
   { id: 'method', label: 'Reference', hint: 'Indicators & desk guide' },
   { id: 'about', label: 'About', hint: 'Platform & limits' },

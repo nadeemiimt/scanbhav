@@ -80,6 +80,12 @@ class LtpStreamManager:
             start_ltp_position_guard()
         except Exception as exc:
             logger.warning("LTP position guard failed to start: %s", exc)
+        try:
+            from trading.universe_ltp_watch import start_universe_ltp_watch
+
+            start_universe_ltp_watch()
+        except Exception as exc:
+            logger.warning("Universe LTP watch failed to start: %s", exc)
 
     def stop(self) -> None:
         self._stop.set()
@@ -87,6 +93,12 @@ class LtpStreamManager:
             from trading.ltp_position_guard import stop_ltp_position_guard
 
             stop_ltp_position_guard()
+        except Exception:
+            pass
+        try:
+            from trading.universe_ltp_watch import stop_universe_ltp_watch
+
+            stop_universe_ltp_watch()
         except Exception:
             pass
         remove_listener(self._listener)
@@ -123,6 +135,13 @@ class LtpStreamManager:
             stream_status = self._yahoo.status()
 
         symbols = _desired_symbols()
+        universe_watch: dict[str, Any] = {}
+        try:
+            from trading.universe_ltp_watch import universe_ltp_watch_status
+
+            universe_watch = universe_ltp_watch_status()
+        except Exception:
+            pass
         return {
             "enabled": self._enabled and not gateway_enabled(),
             "running": transport != "none",
@@ -134,6 +153,7 @@ class LtpStreamManager:
                 "symbols": cache.get("symbols", 0),
                 "fresh_60s": cache.get("fresh", 0),
             },
+            "universe_ltp_watch": universe_watch,
             "subscribed": symbols[:24],
             "note": (
                 "Zerodha = KiteTicker WebSocket. Groww/FYERS = fast REST poll. "

@@ -11,7 +11,16 @@ from fetch_stock_data import yahoo_symbol
 
 
 def finnhub_key() -> Optional[str]:
-    return os.environ.get("FINNHUB_API_KEY") or os.environ.get("SCAN_BHAV_FINNHUB_API_KEY")
+    key = os.environ.get("FINNHUB_API_KEY") or os.environ.get("SCAN_BHAV_FINNHUB_API_KEY")
+    if key:
+        return key
+    try:
+        from integrations.keys import get_secret
+
+        ui = get_secret("finnhub").strip()
+        return ui or None
+    except Exception:
+        return None
 
 
 def finnhub_webhook_secret() -> Optional[str]:

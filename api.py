@@ -12,15 +12,20 @@ from utils.logging_config import configure_logging, get_logger
 configure_logging()
 logger = get_logger(__name__)
 
+def _allowed_origins() -> list[str]:
+    import os
+
+    raw = os.environ.get(
+        "ALLOWED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:8000,http://localhost:8000",
+    )
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
 app = FastAPI(title="Scan Bhav Research API", version="0.6.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:8000",
-        "http://localhost:8000",
-    ],
+    allow_origins=_allowed_origins(),
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],

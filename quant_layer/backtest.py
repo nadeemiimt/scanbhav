@@ -23,15 +23,35 @@ def run_backtest(
 
     for i in range(1, len(df)):
         if not in_position and entry_col in df.columns and bool(df[entry_col].iloc[i]):
+            try:
+                close = float(df["close_adj"].iloc[i])
+            except (TypeError, ValueError):
+                continue
+            if close != close or close <= 0:  # NaN / invalid
+                continue
+            atr_raw = df["atr_14"].iloc[i] if "atr_14" in df.columns else 0
+            try:
+                atr = float(atr_raw or 0)
+            except (TypeError, ValueError):
+                atr = 0.0
+            if atr != atr or atr < 0:
+                atr = 0.0
+            # Without ATR, use a 2% synthetic stop so the trade can still complete.
+            if atr <= 0:
+                atr = close * 0.02
             entry_idx = i
             entry_i = i
-            entry_price = float(df["close_adj"].iloc[i]) * (1 + slippage_pct / 100)
-            atr = float(df["atr_14"].iloc[i] or 0)
+            entry_price = close * (1 + slippage_pct / 100)
             stop_price = entry_price - stop_atr_mult * atr
             target_price = entry_price + target_r * (entry_price - stop_price)
             in_position = True
         elif in_position:
-            price = float(df["close_adj"].iloc[i])
+            try:
+                price = float(df["close_adj"].iloc[i])
+            except (TypeError, ValueError):
+                continue
+            if price != price:
+                continue
             reason = None
             if price <= stop_price:
                 reason = "stop"

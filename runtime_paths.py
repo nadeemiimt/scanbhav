@@ -21,14 +21,14 @@ def bundle_dir() -> Path:
 
 
 def user_data_dir() -> Path:
-    if not is_frozen():
-        return Path(__file__).resolve().parent
-
     override = os.environ.get("SCAN_BHAV_DATA", "").strip()
     if override:
         path = Path(override).expanduser().resolve()
         path.mkdir(parents=True, exist_ok=True)
         return path
+
+    if not is_frozen():
+        return Path(__file__).resolve().parent
 
     if sys.platform == "win32":
         base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from routes import advisor, auth, broker, broker_holdings, desk, genai, health, market, portfolio, predictions, quant_pipeline, stocks, swing, ta, trading, webhooks
+from routes import advisor, auth, broker, broker_holdings, desk, genai, health, integrations, market, portfolio, predictions, quant_pipeline, stocks, swing, ta, trading, webhooks
 
 
 def register_routes(app: FastAPI) -> None:
@@ -23,6 +23,7 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(advisor.router)
     app.include_router(trading.router)
     app.include_router(webhooks.router)
+    app.include_router(integrations.router)
 
 
 def mount_spa(app: FastAPI, base_dir) -> None:
