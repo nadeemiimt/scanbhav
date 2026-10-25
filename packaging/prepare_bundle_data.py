@@ -55,6 +55,26 @@ def main() -> None:
         encoding="utf-8",
     )
 
+    (OUT / "README-FIRST.txt").write_text(
+        "\n".join(
+            [
+                "Scan Bhav — quick start for shared installs",
+                "==========================================",
+                "",
+                "REQUIRED: Windows 10/11 64-bit or macOS 12+, a browser, internet for prices.",
+                "NOT REQUIRED: Python, Node, pip, or any API key for Analyze / Screen / Paper / Backtest.",
+                "OPTIONAL: Ollama for local GenAI; API/broker keys in Settings.",
+                "",
+                "Windows: run ScanBhav.exe (keep _internal beside it).",
+                "Mac: open ScanBhav.app (right-click → Open the first time if blocked).",
+                "",
+                "In-app: Settings → Run on this computer can install/open Ollama and the VC++ download.",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
     print(f"Bundle seed ready: {OUT}")
 
 

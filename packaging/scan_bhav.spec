@@ -19,6 +19,7 @@ hiddenimports += collect_submodules("integrations")
 hiddenimports += [
     "fixtures",
     "fixtures.playwright_recommend",
+    "setup_prereqs",
     "api",
     "runtime_paths",
     "uvicorn",

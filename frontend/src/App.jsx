@@ -94,6 +94,7 @@ import { SwingDeskPage } from './swingDesk'
 import { floorChatDelayMs } from './utils/floorChat'
 import { AuthHeaderButton } from './components/auth/LoginModal'
 import { SettingsHeaderButton, SettingsModal } from './components/SettingsModal'
+import { FirstRunSetupModal } from './components/SetupPrereqsPanel'
 import { loadSettings, saveSettings } from './lib/siteSettings'
 import RequireAuth, { useAuthGate } from './components/auth/RequireAuth'
 import { PRIMARY_NAV, SECONDARY_TAB_IDS, visiblePrimaryNav, visibleHorizons } from './appNav'
@@ -143,6 +144,7 @@ export default function App() {
   const [tab, setTab] = useState(initialRoute.tab)
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [firstRunSetupOpen, setFirstRunSetupOpen] = useState(false)
   const [symbol, setSymbol] = useState('RELIANCE.NSE')
   const [provider, setProvider] = useState(initialSettings.provider)
   const [forceRefresh, setForceRefresh] = useState(initialSettings.forceRefresh)
@@ -258,6 +260,14 @@ export default function App() {
 
   useEffect(() => {
     document.title = APP_TITLE
+  }, [])
+
+  useEffect(() => {
+    apiGetOptional('/api/setup/status')
+      .then(data => {
+        if (data?.show_first_run) setFirstRunSetupOpen(true)
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -1967,6 +1977,11 @@ export default function App() {
           localStorage.removeItem('scanBhavWizard')
           setWizardOpen(true)
         }}
+      />
+
+      <FirstRunSetupModal
+        open={firstRunSetupOpen}
+        onClose={() => setFirstRunSetupOpen(false)}
       />
 
       <footer className="site-footer">

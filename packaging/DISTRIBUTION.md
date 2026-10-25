@@ -50,6 +50,24 @@ $env:SCAN_BHAV_INSTALL_PACKAGING = "1"
 
 GitHub Actions workflow `.github/workflows/desktop-packages.yml` builds Mac + Windows on `workflow_dispatch` or version tags. Download the `ScanBhav-macOS` and `ScanBhav-Windows` artifacts from the run.
 
+## Prerequisites for external users (shared .exe / .app)
+
+**You do not install Python, Node, or pip.** Those are already inside the package.
+
+| | Windows | Mac |
+| --- | --- | --- |
+| OS | 64-bit Windows 10 or 11 | macOS 12+ (Apple Silicon arm64 build from CI) |
+| Required software | None beyond a browser | None beyond a browser |
+| First open | Unzip → run `ScanBhav.exe` (keep `_internal` next to it) | Open `ScanBhav.app` or the `.dmg` |
+| Gatekeeper / SmartScreen | “More info → Run anyway” if unsigned | Right-click → Open the first time if unsigned |
+| Optional | [Ollama](https://ollama.com) for local GenAI; VC++ x64 redistributable only if a DLL error appears | [Ollama](https://ollama.com) for local GenAI |
+| API keys | Optional — Settings → Your API keys | Same |
+
+First launch opens a **setup panel** (also under Settings → Run on this computer) that can:
+- Install / open **Ollama** (`winget` / `brew` when available, otherwise the download page)
+- Open the **VC++ Redistributable** download on Windows
+- Explain that core Analyze / Screener / Paper / Backtest need **no token**
+
 ## Tokens required to run
 
 **Core desk needs no API key.** Analyze, Screener, horizon picks, paper Autopilot, and backtests use Yahoo Finance + NSE public data.

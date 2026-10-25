@@ -3,12 +3,13 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from routes import advisor, auth, broker, broker_holdings, desk, genai, health, integrations, market, portfolio, predictions, quant_pipeline, stocks, swing, ta, trading, webhooks
+from routes import advisor, auth, broker, broker_holdings, desk, genai, health, integrations, market, portfolio, predictions, quant_pipeline, setup, stocks, swing, ta, trading, webhooks
 
 
 def register_routes(app: FastAPI) -> None:
     app.include_router(auth.router)
     app.include_router(health.router)
+    app.include_router(setup.router)
     app.include_router(stocks.router)
     app.include_router(predictions.router)
     app.include_router(genai.router)

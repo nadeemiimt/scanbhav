@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { DEFAULT_SETTINGS, saveSettings, applySettings } from '../lib/siteSettings'
 import { SECONDARY_NAV } from '../appNav'
 import { IntegrationsPanel } from './integrations/IntegrationsPanel'
+import { SetupPrereqsPanel } from './SetupPrereqsPanel'
 
 const PROVIDERS = [
   { id: 'auto', label: 'Auto (Yahoo → NSE)' },
@@ -174,6 +175,8 @@ export function SettingsModal({
                 Learn mode — tap metrics for explainers
               </label>
             </section>
+
+            <SetupPrereqsPanel />
 
             <IntegrationsPanel />
 
